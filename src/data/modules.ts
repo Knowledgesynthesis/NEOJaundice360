@@ -1,141 +1,101 @@
-import { Module } from '@/types';
+import type { ModuleId } from './questions';
 
-export const modules: Module[] = [
-  {
-    id: 'home',
-    title: 'Home',
-    description: 'Welcome to NeoJaundice360',
-    icon: 'Home',
-    path: '/',
-    estimatedTime: 0,
-    topics: []
-  },
+export interface LearningModule {
+  id: ModuleId;
+  path: string;
+  step: number;
+  title: string;
+  summary: string;
+  minutes: number;
+  objectives: string[];
+}
+
+export const MODULES: LearningModule[] = [
   {
     id: 'physiology',
-    title: 'Bilirubin Physiology',
-    description: 'Understanding bilirubin metabolism from production to excretion',
-    icon: 'FlaskConical',
     path: '/physiology',
-    estimatedTime: 15,
-    topics: [
-      'Heme breakdown pathway',
-      'Bilirubin conjugation',
-      'Enterohepatic circulation',
-      'Why newborns are at risk'
-    ]
+    step: 1,
+    title: 'Bilirubin physiology',
+    summary: 'Production, transport, conjugation, excretion — and why the newborn tips the balance.',
+    minutes: 15,
+    objectives: [
+      'Trace bilirubin from heme to stool and name the enzyme at each step',
+      'Explain the three newborn mechanisms: ↑ production, ↓ conjugation, ↑ enterohepatic recirculation',
+      'Explain why only unbound unconjugated bilirubin is neurotoxic',
+    ],
   },
   {
-    id: 'types',
-    title: 'Types of Jaundice',
-    description: 'Comprehensive overview of jaundice etiologies',
-    icon: 'BookOpen',
-    path: '/types',
-    prerequisites: ['physiology'],
-    estimatedTime: 25,
-    topics: [
-      'Physiologic vs pathologic',
-      'Unconjugated hyperbilirubinemia',
-      'Conjugated hyperbilirubinemia',
-      'Hemolytic causes',
-      'Cholestatic causes'
-    ]
+    id: 'causes',
+    path: '/causes',
+    step: 2,
+    title: 'Causes & classification',
+    summary: 'Unconjugated vs conjugated, mechanism-based differential, and the look-alikes.',
+    minutes: 20,
+    objectives: [
+      'Classify a jaundiced infant by fraction, timing and mechanism',
+      'Distinguish suboptimal intake jaundice from breast milk jaundice',
+      'Recognize isoimmune, G6PD and membrane hemolysis',
+    ],
   },
   {
-    id: 'diagnosis',
-    title: 'Diagnostic Approach',
-    description: 'Systematic evaluation of neonatal jaundice',
-    icon: 'Stethoscope',
-    path: '/diagnosis',
-    prerequisites: ['physiology', 'types'],
-    estimatedTime: 20,
-    topics: [
-      'History and physical exam',
-      'Laboratory workup',
-      'When to check direct bilirubin',
-      'Red flags for pathology',
-      'Timing and trajectory'
-    ]
+    id: 'evaluation',
+    path: '/evaluation',
+    step: 3,
+    title: 'Evaluation & work-up',
+    summary: 'Universal screening, TcB vs TSB, rate of rise, and a hemolysis analyzer.',
+    minutes: 20,
+    objectives: [
+      'Apply universal screening and the TcB→TSB rule',
+      'Calculate rate of rise and recognize hemolysis',
+      'Order the right first-line tests for early, rapid or prolonged jaundice',
+    ],
   },
   {
-    id: 'nomogram',
-    title: 'Nomogram Explorer',
-    description: 'Interactive Bhutani nomogram for risk stratification',
-    icon: 'LineChart',
-    path: '/nomogram',
-    prerequisites: ['diagnosis'],
-    estimatedTime: 15,
-    topics: [
-      'Hour-specific bilirubin levels',
-      'Risk zones',
-      'Follow-up recommendations',
-      'Predicting severe hyperbilirubinemia'
-    ]
+    id: 'thresholds',
+    path: '/thresholds',
+    step: 4,
+    title: 'Thresholds & follow-up',
+    summary: 'AAP 2022 curves, escalation, distance-to-threshold follow-up, NICE and preterm tables.',
+    minutes: 25,
+    objectives: [
+      'Select the correct AAP 2022 curve from GA and neurotoxicity risk factors',
+      'Plan follow-up from the distance to the phototherapy threshold',
+      'Convert between mg/dL and µmol/L and compare AAP with NICE',
+    ],
   },
   {
-    id: 'phototherapy',
-    title: 'Phototherapy Calculator',
-    description: 'AAP guideline-based treatment thresholds',
-    icon: 'Lightbulb',
-    path: '/phototherapy',
-    prerequisites: ['nomogram'],
-    estimatedTime: 20,
-    topics: [
-      'AAP 2022 guidelines',
-      'Risk stratification',
-      'Phototherapy thresholds',
-      'Exchange transfusion criteria',
-      'IVIG indications'
-    ]
+    id: 'treatment',
+    path: '/treatment',
+    step: 5,
+    title: 'Treatment',
+    summary: 'Phototherapy dose and monitoring, stopping and rebound, escalation, IVIG, exchange.',
+    minutes: 25,
+    objectives: [
+      'Prescribe intensive phototherapy and judge its response',
+      'Run the escalation-of-care bundle and indicate exchange transfusion',
+      'Plan stopping, rebound checks and home phototherapy',
+    ],
   },
   {
-    id: 'cases',
-    title: 'Case Studies',
-    description: 'Interactive case-based learning',
-    icon: 'FileText',
-    path: '/cases',
-    prerequisites: ['types', 'diagnosis'],
-    estimatedTime: 30,
-    topics: [
-      'Real-world scenarios',
-      'Stepwise reasoning',
-      'Differential diagnosis',
-      'Management decisions'
-    ]
+    id: 'neurotoxicity',
+    path: '/neurotoxicity',
+    step: 6,
+    title: 'Neurotoxicity',
+    summary: 'Acute bilirubin encephalopathy, BIND scoring, kernicterus spectrum, hearing.',
+    minutes: 15,
+    objectives: ['Stage ABE with the BIND score', 'Know when signs override the number', 'Order ABR and neurodevelopmental follow-up'],
   },
   {
-    id: 'assessment',
-    title: 'Knowledge Assessment',
-    description: 'Test your understanding with questions and explanations',
-    icon: 'ClipboardCheck',
-    path: '/assessment',
-    estimatedTime: 20,
-    topics: [
-      'Multiple choice questions',
-      'Case-based questions',
-      'Detailed explanations',
-      'Track your progress'
-    ]
+    id: 'cholestasis',
+    path: '/cholestasis',
+    step: 7,
+    title: 'Cholestasis & biliary atresia',
+    summary: 'DB/CB ≥1.0 mg/dL, the 2–4-week check, stool colors, work-up and Kasai timing.',
+    minutes: 20,
+    objectives: [
+      'Detect cholestasis with “eyes, stool, first bilirubin” at 2–4 weeks',
+      'Start the first-line work-up and urgent referral',
+      'Explain why Kasai timing drives outcomes',
+    ],
   },
-  {
-    id: 'glossary',
-    title: 'Glossary',
-    description: 'Quick reference for key terms and concepts',
-    icon: 'Book',
-    path: '/glossary',
-    estimatedTime: 10,
-    topics: [
-      'Key definitions',
-      'Clinical terms',
-      'Laboratory values',
-      'Guidelines summary'
-    ]
-  }
 ];
-
-export function getModuleById(id: string): Module | undefined {
-  return modules.find(m => m.id === id);
-}
-
-export function getModulesByPrerequisite(prereqId: string): Module[] {
-  return modules.filter(m => m.prerequisites?.includes(prereqId));
-}

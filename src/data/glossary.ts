@@ -1,172 +1,54 @@
-import { GlossaryTerm } from '@/types';
+export interface Term {
+  term: string;
+  def: string;
+  category: 'Physiology' | 'Measurement' | 'Causes' | 'Treatment' | 'Neurotoxicity' | 'Cholestasis';
+  see?: string; // route
+}
 
-export const glossaryTerms: GlossaryTerm[] = [
-  {
-    term: 'Bilirubin',
-    definition: 'Yellow pigment formed from the breakdown of heme (from hemoglobin). Exists as unconjugated (indirect) or conjugated (direct) forms.',
-    category: 'Basic',
-    relatedTerms: ['Unconjugated bilirubin', 'Conjugated bilirubin', 'Jaundice']
-  },
-  {
-    term: 'Jaundice',
-    definition: 'Yellow discoloration of skin and sclera due to elevated bilirubin levels. Clinically visible when total bilirubin >5 mg/dL.',
-    category: 'Basic',
-    relatedTerms: ['Hyperbilirubinemia', 'Icterus']
-  },
-  {
-    term: 'Unconjugated Bilirubin',
-    definition: 'Water-insoluble form of bilirubin (also called indirect bilirubin). Binds to albumin in blood and can cross blood-brain barrier causing neurotoxicity.',
-    category: 'Basic',
-    relatedTerms: ['Indirect bilirubin', 'Kernicterus']
-  },
-  {
-    term: 'Conjugated Bilirubin',
-    definition: 'Water-soluble form of bilirubin (also called direct bilirubin) produced by hepatic glucuronidation. Elevated levels indicate cholestasis.',
-    category: 'Basic',
-    relatedTerms: ['Direct bilirubin', 'Cholestasis']
-  },
-  {
-    term: 'Physiologic Jaundice',
-    definition: 'Normal, self-limited jaundice in newborns appearing after 24 hours, peaking at 3-5 days, and resolving by 1-2 weeks. Due to immature hepatic conjugation.',
-    category: 'Etiology',
-    relatedTerms: ['Pathologic jaundice']
-  },
-  {
-    term: 'Pathologic Jaundice',
-    definition: 'Abnormal jaundice characterized by: onset <24 hours, rapid rise (>5 mg/dL/day), total bilirubin >17 mg/dL, direct >2 mg/dL, or prolonged duration.',
-    category: 'Etiology',
-    relatedTerms: ['Physiologic jaundice', 'Hemolysis']
-  },
-  {
-    term: 'Kernicterus',
-    definition: 'Chronic, permanent bilirubin encephalopathy from unconjugated bilirubin deposition in basal ganglia. Causes movement disorders, hearing loss, and developmental delay.',
-    category: 'Complications',
-    relatedTerms: ['BIND', 'Acute bilirubin encephalopathy']
-  },
-  {
-    term: 'BIND',
-    definition: 'Bilirubin-Induced Neurologic Dysfunction. Spectrum of acute and chronic neurological effects from hyperbilirubinemia.',
-    category: 'Complications',
-    relatedTerms: ['Kernicterus', 'Acute bilirubin encephalopathy']
-  },
-  {
-    term: 'Phototherapy',
-    definition: 'Treatment using blue-green light (420-470nm) to convert unconjugated bilirubin to water-soluble photoisomers that can be excreted without conjugation.',
-    category: 'Management',
-    relatedTerms: ['Lumirubin', 'Photoisomers']
-  },
-  {
-    term: 'Exchange Transfusion',
-    definition: 'Procedure to rapidly reduce bilirubin by replacing infant blood with donor blood. Reserved for severe hyperbilirubinemia unresponsive to phototherapy.',
-    category: 'Management',
-    relatedTerms: ['Double volume exchange', 'IVIG']
-  },
-  {
-    term: 'Bhutani Nomogram',
-    definition: 'Hour-specific bilirubin nomogram used to assess risk of severe hyperbilirubinemia based on bilirubin level and age in hours.',
-    category: 'Diagnosis',
-    relatedTerms: ['Risk zones', 'Percentiles']
-  },
-  {
-    term: 'Coombs Test (DAT)',
-    definition: 'Direct Antiglobulin Test detecting antibodies bound to RBC surface. Positive in immune-mediated hemolysis (ABO, Rh incompatibility).',
-    category: 'Diagnosis',
-    relatedTerms: ['ABO incompatibility', 'Rh disease', 'Hemolysis']
-  },
-  {
-    term: 'Cholestasis',
-    definition: 'Impaired bile flow resulting in elevated conjugated bilirubin. Characterized by dark urine, pale stools, and direct bilirubin >1 mg/dL or >20% of total.',
-    category: 'Etiology',
-    relatedTerms: ['Biliary atresia', 'Neonatal hepatitis', 'Conjugated hyperbilirubinemia']
-  },
-  {
-    term: 'Biliary Atresia',
-    definition: 'Progressive obliteration of extrahepatic bile ducts. Requires surgical intervention (Kasai procedure) before 60 days of life. Presents with cholestatic jaundice and acholic stools.',
-    category: 'Etiology',
-    relatedTerms: ['Cholestasis', 'Acholic stools', 'Kasai procedure']
-  },
-  {
-    term: 'ABO Incompatibility',
-    definition: 'Hemolytic disease when mother is type O and baby is A or B. Maternal anti-A or anti-B antibodies cross placenta causing hemolysis. Positive DAT and spherocytes on smear.',
-    category: 'Etiology',
-    relatedTerms: ['Hemolysis', 'Coombs test', 'Spherocytes']
-  },
-  {
-    term: 'Rh Disease',
-    definition: 'Hemolytic disease when Rh-negative mother develops anti-D antibodies against Rh-positive fetus. Can cause severe anemia and hydrops. Prevented by RhoGAM.',
-    category: 'Etiology',
-    relatedTerms: ['RhoGAM', 'Hemolysis', 'Hydrops fetalis']
-  },
-  {
-    term: 'G6PD Deficiency',
-    definition: 'X-linked enzyme deficiency causing hemolysis with oxidative stress. Triggered by infections, certain foods (fava beans), and medications. More common in Mediterranean, African, and Asian populations.',
-    category: 'Etiology',
-    relatedTerms: ['Hemolysis', 'Bite cells', 'Oxidative stress']
-  },
-  {
-    term: 'Breast Milk Jaundice',
-    definition: 'Prolonged unconjugated hyperbilirubinemia in thriving breastfed infants. Peaks at 2-3 weeks, can last 3-12 weeks. Caused by substances in breast milk inhibiting conjugation.',
-    category: 'Etiology',
-    relatedTerms: ['Breastfeeding failure jaundice', 'Physiologic jaundice']
-  },
-  {
-    term: 'Breastfeeding Failure Jaundice',
-    definition: 'Jaundice in first week from inadequate breast milk intake causing dehydration and increased enterohepatic circulation. Poor weight gain and decreased output.',
-    category: 'Etiology',
-    relatedTerms: ['Breast milk jaundice', 'Dehydration']
-  },
-  {
-    term: 'Enterohepatic Circulation',
-    definition: 'Reabsorption of unconjugated bilirubin from intestine back into bloodstream. Increased in newborns due to beta-glucuronidase and delayed meconium passage.',
-    category: 'Physiology',
-    relatedTerms: ['Beta-glucuronidase', 'Bilirubin metabolism']
-  },
-  {
-    term: 'IVIG',
-    definition: 'Intravenous Immunoglobulin (0.5-1 g/kg) used in immune-mediated hemolysis to reduce antibody-mediated RBC destruction. May prevent need for exchange transfusion.',
-    category: 'Management',
-    relatedTerms: ['Exchange transfusion', 'Hemolysis', 'ABO incompatibility']
-  },
-  {
-    term: 'TcB',
-    definition: 'Transcutaneous Bilirubin measurement. Non-invasive screening tool. Should be confirmed with serum bilirubin if elevated or for clinical decisions.',
-    category: 'Diagnosis',
-    relatedTerms: ['TSB', 'Total serum bilirubin']
-  },
-  {
-    term: 'TSB',
-    definition: 'Total Serum Bilirubin. Blood test measuring total bilirubin level. Gold standard for diagnosis and management decisions.',
-    category: 'Diagnosis',
-    relatedTerms: ['TcB', 'Direct bilirubin', 'Indirect bilirubin']
-  },
-  {
-    term: 'Acholic Stools',
-    definition: 'Pale, clay-colored stools indicating absence of bile. Key sign of cholestasis and biliary obstruction. Urgent evaluation needed.',
-    category: 'Diagnosis',
-    relatedTerms: ['Cholestasis', 'Biliary atresia']
-  },
-  {
-    term: 'Spherocytes',
-    definition: 'Small, round RBCs without central pallor seen on blood smear. Characteristic of ABO incompatibility and hereditary spherocytosis.',
-    category: 'Diagnosis',
-    relatedTerms: ['ABO incompatibility', 'Blood smear']
-  }
+export const GLOSSARY: Term[] = [
+  { term: 'Acholic stool', category: 'Cholestasis', def: 'Pale, chalky-white or clay-colored stool lacking bile pigment. With jaundice, it means DB/CB today.', see: '/cholestasis' },
+  { term: 'Acute bilirubin encephalopathy (ABE)', category: 'Neurotoxicity', def: 'Acute clinical syndrome of bilirubin toxicity: lethargy/poor suck → hypertonia, arching, retrocollis, high-pitched cry → apnea, seizures, coma. Intermediate/advanced signs mandate urgent exchange.', see: '/neurotoxicity' },
+  { term: 'Albumin', category: 'Physiology', def: 'Carrier protein binding unconjugated bilirubin. Albumin <3.0 g/dL is an AAP 2022 neurotoxicity risk factor.' },
+  { term: 'Auditory neuropathy spectrum disorder (ANSD)', category: 'Neurotoxicity', def: 'Hearing loss from brainstem/auditory-nerve injury with intact outer hair cells: OAE passes, ABR is abnormal.', see: '/neurotoxicity' },
+  { term: 'B/A ratio', category: 'Measurement', def: 'TSB (mg/dL) ÷ albumin (g/dL). Exchange considered at ≥8.0, ≥7.2 or ≥6.8 depending on GA and risk factors. Used with, never instead of, TSB.', see: '/thresholds' },
+  { term: 'β-Glucuronidase', category: 'Physiology', def: 'Intestinal (and breast-milk) enzyme that deconjugates bilirubin, enabling reabsorption — the engine of enterohepatic recirculation.' },
+  { term: 'Bhutani nomogram', category: 'Measurement', def: '1999 hour-specific TSB percentile chart (risk zones). Historical; AAP 2022 replaced risk zones with distance-to-threshold follow-up.', see: '/thresholds' },
+  { term: 'Biliary atresia', category: 'Cholestasis', def: 'Progressive obliteration of extrahepatic bile ducts. Treated by Kasai portoenterostomy, best before 30–45 days.', see: '/cholestasis' },
+  { term: 'BIND score', category: 'Neurotoxicity', def: 'Bilirubin-induced neurologic dysfunction score: mental status, tone, cry (0–3 each). 1–3 subtle, 4–6 moderate, 7–9 advanced ABE.', see: '/neurotoxicity' },
+  { term: 'Biliverdin reductase', category: 'Physiology', def: 'Enzyme reducing green biliverdin to yellow unconjugated bilirubin.' },
+  { term: 'Bronze baby syndrome', category: 'Treatment', def: 'Gray-brown skin discoloration during phototherapy in cholestatic infants; benign, resolves after stopping.' },
+  { term: 'Cholestasis', category: 'Cholestasis', def: 'Impaired bile formation or flow. In infants: direct/conjugated bilirubin ≥1.0 mg/dL (17 µmol/L) at any total bilirubin.', see: '/cholestasis' },
+  { term: 'Conjugated bilirubin (CB)', category: 'Measurement', def: 'Bilirubin glucuronides measured by specific methods. “Direct” bilirubin (DB) approximates CB plus delta-bilirubin.' },
+  { term: 'Crigler–Najjar syndrome', category: 'Causes', def: 'UGT1A1 deficiency: type I absent activity (no phenobarbital response), type II reduced activity (responds to phenobarbital).' },
+  { term: 'DAT (direct antiglobulin test)', category: 'Measurement', def: 'Detects antibody on infant red cells. Positive = isoimmune hemolysis (a neurotoxicity risk factor). May be weak or negative in ABO disease; weakly positive after maternal anti-D prophylaxis.' },
+  { term: 'Delta-bilirubin', category: 'Measurement', def: 'Bilirubin covalently bound to albumin; part of “direct” bilirubin, cleared slowly (half-life of albumin), so DB can lag after cholestasis resolves.' },
+  { term: 'Direct bilirubin (DB)', category: 'Measurement', def: 'Water-soluble fraction reacting directly with diazo reagent. DB/CB ≥1.0 mg/dL is abnormal.' },
+  { term: 'Enterohepatic recirculation', category: 'Physiology', def: 'Deconjugation of bilirubin in the gut and reabsorption into blood. Increased by poor intake, delayed stooling and obstruction.' },
+  { term: 'Escalation-of-care threshold', category: 'Treatment', def: '2 mg/dL below the exchange threshold. A medical emergency: NICU-level care, intensive phototherapy, TSB q2h, labs, IVIG if isoimmune.', see: '/treatment' },
+  { term: 'ETCOc', category: 'Measurement', def: 'End-tidal carbon monoxide corrected for ambient CO — index of heme catabolism (bilirubin production).' },
+  { term: 'Exchange transfusion', category: 'Treatment', def: 'Double-volume (~160–170 mL/kg) blood replacement removing bilirubin and antibody-coated cells; roughly halves TSB.', see: '/treatment' },
+  { term: 'G6PD deficiency', category: 'Causes', def: 'X-linked red-cell enzyme deficiency causing reduced conjugation and oxidant hemolysis. A neurotoxicity risk factor; activity may be falsely normal during hemolysis.', see: '/causes' },
+  { term: 'GGT', category: 'Cholestasis', def: 'Gamma-glutamyl transferase. High in biliary atresia, Alagille, A1AT; low/normal in PFIC1/2 and bile-acid synthesis defects.' },
+  { term: 'Gilbert syndrome', category: 'Causes', def: 'UGT1A1 promoter variant (*28; *6 in East Asia) that amplifies neonatal jaundice, especially with hemolysis or G6PD deficiency.' },
+  { term: 'Heme oxygenase', category: 'Physiology', def: 'Rate-limiting enzyme: heme → biliverdin + iron + carbon monoxide.' },
+  { term: 'Home phototherapy', category: 'Treatment', def: 'AAP 2022 option for selected infants: ≥38 wk, ≥48 h, well, no neurotoxicity risk factors, no prior phototherapy, TSB ≤1 mg/dL above threshold, LED device, daily TSB.', see: '/treatment' },
+  { term: 'Hyperbilirubinemia risk factors', category: 'Measurement', def: 'AAP 2022 Table 1 factors raising the chance of significant hyperbilirubinemia (lower GA, jaundice <24 h, near-threshold pre-discharge value, hemolysis, prior sibling treatment, exclusive breastfeeding with suboptimal intake, scalp hematoma/bruising, Down syndrome, macrosomic infant of diabetic mother). They intensify follow-up, not the threshold.' },
+  { term: 'Intensive phototherapy', category: 'Treatment', def: 'Irradiance ≥30 µW/cm²/nm in the blue–green band (~460–490 nm) over maximal skin surface.', see: '/treatment' },
+  { term: 'IVIG', category: 'Treatment', def: 'Intravenous immunoglobulin 0.5–1 g/kg over 2 h for isoimmune hemolysis at the escalation threshold; may repeat in 12 h. Low-certainty evidence.' },
+  { term: 'Kasai portoenterostomy', category: 'Cholestasis', def: 'Surgery anastomosing a jejunal Roux limb to the porta hepatis to restore bile flow in biliary atresia.' },
+  { term: 'Kernicterus spectrum disorder (KSD)', category: 'Neurotoxicity', def: 'Chronic sequelae of bilirubin neurotoxicity: dystonia/athetosis, auditory neuropathy, upward gaze palsy, dental enamel dysplasia; motor-, auditory-predominant or subtle forms.', see: '/neurotoxicity' },
+  { term: 'Lumirubin', category: 'Treatment', def: 'Structural photoisomer formed irreversibly during phototherapy and cleared rapidly in bile and urine without conjugation.' },
+  { term: 'MCHC/MCV ratio', category: 'Measurement', def: 'Neonatal hereditary-spherocytosis index; >0.36 is highly sensitive and specific.' },
+  { term: 'Neurotoxicity risk factors', category: 'Measurement', def: 'AAP 2022: GA <38 wk (in curves), albumin <3.0 g/dL, isoimmune hemolysis, G6PD deficiency or other hemolysis, sepsis, significant instability in previous 24 h. They select the lower threshold curves.', see: '/thresholds' },
+  { term: 'NEWT', category: 'Measurement', def: 'Newborn Weight Tool — hour-specific weight-loss percentiles for exclusively breastfed infants.' },
+  { term: 'OATP1B1/1B3', category: 'Physiology', def: 'Hepatocyte sinusoidal transporters that take up unconjugated bilirubin.' },
+  { term: 'Phototherapy threshold', category: 'Treatment', def: 'Hour-specific TSB at which phototherapy is recommended, by GA and neurotoxicity risk factors (AAP 2022).', see: '/thresholds' },
+  { term: 'Prolonged jaundice', category: 'Causes', def: 'Jaundice beyond 14 days (term) or 21 days (preterm). Always measure DB/CB.' },
+  { term: 'Rebound hyperbilirubinemia', category: 'Treatment', def: 'TSB returning to the phototherapy threshold within 72–96 h of stopping. Higher risk if started <48 h or hemolysis.' },
+  { term: 'Stool color card', category: 'Cholestasis', def: 'Photographic card letting parents compare stool color; national use in Taiwan improved timely Kasai.' },
+  { term: 'Suboptimal intake jaundice', category: 'Causes', def: 'First-week jaundice from inadequate milk intake (formerly “breastfeeding jaundice”). Treat by improving intake.' },
+  { term: 'TcB', category: 'Measurement', def: 'Transcutaneous bilirubin. Confirm with TSB if ≥15 mg/dL or within 3 mg/dL of the threshold; unreliable during and <24 h after phototherapy.' },
+  { term: 'TSB', category: 'Measurement', def: 'Total serum bilirubin — the value used for all treatment decisions (never subtract the direct fraction).' },
+  { term: 'UGT1A1', category: 'Physiology', def: 'Hepatic enzyme conjugating bilirubin with glucuronic acid; ≈1% of adult activity at term.' },
+  { term: 'Unbound (free) bilirubin', category: 'Physiology', def: 'The small fraction not bound to albumin; lipophilic and able to cross the blood–brain barrier. Increased by acidosis, low albumin and displacing drugs (ceftriaxone, sulfonamides).' },
 ];
-
-export function searchGlossary(searchTerm: string): GlossaryTerm[] {
-  const lowerSearch = searchTerm.toLowerCase();
-  return glossaryTerms.filter(
-    term =>
-      term.term.toLowerCase().includes(lowerSearch) ||
-      term.definition.toLowerCase().includes(lowerSearch) ||
-      term.category.toLowerCase().includes(lowerSearch)
-  );
-}
-
-export function getGlossaryByCategory(category: string): GlossaryTerm[] {
-  return glossaryTerms.filter(term => term.category === category);
-}
-
-export function getGlossaryCategories(): string[] {
-  return Array.from(new Set(glossaryTerms.map(term => term.category)));
-}

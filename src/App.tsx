@@ -1,44 +1,51 @@
-import { Routes, Route } from 'react-router-dom';
-import { useEffect } from 'react';
-import { useAppStore } from './stores/appStore';
+import { lazy, Suspense } from 'react';
+import { Route, Routes } from 'react-router';
 import Layout from './components/Layout';
 import HomePage from './pages/HomePage';
-import PhysiologyPage from './pages/PhysiologyPage';
-import TypesPage from './pages/TypesPage';
-import DiagnosisPage from './pages/DiagnosisPage';
-import NomogramPage from './pages/NomogramPage';
-import PhototherapyPage from './pages/PhototherapyPage';
-import CasesPage from './pages/CasesPage';
-import AssessmentPage from './pages/AssessmentPage';
-import GlossaryPage from './pages/GlossaryPage';
 
-function App() {
-  const darkMode = useAppStore((state) => state.darkMode);
+const PhysiologyPage = lazy(() => import('./pages/PhysiologyPage'));
+const CausesPage = lazy(() => import('./pages/CausesPage'));
+const EvaluationPage = lazy(() => import('./pages/EvaluationPage'));
+const ThresholdsPage = lazy(() => import('./pages/ThresholdsPage'));
+const CalculatorPage = lazy(() => import('./pages/CalculatorPage'));
+const TreatmentPage = lazy(() => import('./pages/TreatmentPage'));
+const NeurotoxicityPage = lazy(() => import('./pages/NeurotoxicityPage'));
+const CholestasisPage = lazy(() => import('./pages/CholestasisPage'));
+const CasesPage = lazy(() => import('./pages/CasesPage'));
+const AssessmentPage = lazy(() => import('./pages/AssessmentPage'));
+const GlossaryPage = lazy(() => import('./pages/GlossaryPage'));
+const ReferencesPage = lazy(() => import('./pages/ReferencesPage'));
+const QuickReferencePage = lazy(() => import('./pages/QuickReferencePage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
-  useEffect(() => {
-    // Initialize dark mode
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [darkMode]);
-
+export default function App() {
   return (
     <Layout>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/physiology" element={<PhysiologyPage />} />
-        <Route path="/types" element={<TypesPage />} />
-        <Route path="/diagnosis" element={<DiagnosisPage />} />
-        <Route path="/nomogram" element={<NomogramPage />} />
-        <Route path="/phototherapy" element={<PhototherapyPage />} />
-        <Route path="/cases" element={<CasesPage />} />
-        <Route path="/assessment" element={<AssessmentPage />} />
-        <Route path="/glossary" element={<GlossaryPage />} />
-      </Routes>
+      <Suspense fallback={<div className="py-20 text-center text-sm text-muted">Loading…</div>}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/physiology" element={<PhysiologyPage />} />
+          <Route path="/causes" element={<CausesPage />} />
+          <Route path="/evaluation" element={<EvaluationPage />} />
+          <Route path="/thresholds" element={<ThresholdsPage />} />
+          <Route path="/calculator" element={<CalculatorPage />} />
+          <Route path="/treatment" element={<TreatmentPage />} />
+          <Route path="/neurotoxicity" element={<NeurotoxicityPage />} />
+          <Route path="/cholestasis" element={<CholestasisPage />} />
+          <Route path="/cases" element={<CasesPage />} />
+          <Route path="/cases/:caseId" element={<CasesPage />} />
+          <Route path="/assessment" element={<AssessmentPage />} />
+          <Route path="/glossary" element={<GlossaryPage />} />
+          <Route path="/references" element={<ReferencesPage />} />
+          <Route path="/quick-reference" element={<QuickReferencePage />} />
+          {/* legacy routes from v1 */}
+          <Route path="/types" element={<CausesPage />} />
+          <Route path="/diagnosis" element={<EvaluationPage />} />
+          <Route path="/nomogram" element={<ThresholdsPage />} />
+          <Route path="/phototherapy" element={<TreatmentPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
     </Layout>
   );
 }
-
-export default App;

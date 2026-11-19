@@ -1,439 +1,267 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ChevronRight, CheckCircle, XCircle } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { permutation } from '@/lib/shuffle';
+import { Link, useNavigate, useParams } from 'react-router';
+import { ArrowLeft, ArrowRight, Calculator, CheckCircle2, Circle, RotateCcw, Square, SquareCheck, XCircle } from 'lucide-react';
+import { CASES, type CaseCalc, type ClinicalCase } from '@/data/cases';
+import { assess } from '@/lib/bili/assess';
+import { NO_RISK_FACTORS } from '@/lib/bili/guidelines';
+import { formatBili } from '@/lib/bili/units';
+import { useApp } from '@/stores/appStore';
+import { Badge, Button, Card, PageHeader } from '@/components/ui';
+import { cn } from '@/lib/cn';
+import { Cite } from '@/components/Cite';
 
-interface CaseStudy {
-  id: string;
-  title: string;
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  presentation: string;
-  vitals: Record<string, string>;
-  labs?: Record<string, string>;
-  questions: {
-    question: string;
-    options: string[];
-    correctAnswer: number;
-    explanation: string;
-  }[];
-  diagnosis: string;
-  keyLearning: string[];
+function CalcPanel({ calc }: { calc: CaseCalc }) {
+  const unit = useApp((s) => s.unit);
+  const a = useMemo(
+    () =>
+      assess({
+        gaWeeks: calc.gaWeeks,
+        measurements: calc.measurements,
+        riskFactors: { ...NO_RISK_FACTORS, ...calc.rf },
+        albumin: calc.albumin,
+        abeSigns: calc.abeSigns,
+      })!,
+    [calc],
+  );
+  const t = a.thresholds;
+  const q = new URLSearchParams();
+  q.set('ga', String(calc.gaWeeks));
+  q.set('m', calc.measurements.map((m) => `${m.ageHours}:${m.value}:${m.method}`).join(','));
+  const rfs = Object.entries(calc.rf ?? {}).filter(([, v]) => v).map(([k]) => k);
+  if (rfs.length) q.set('rf', rfs.join(','));
+  if (calc.albumin) q.set('alb', String(calc.albumin));
+  if (calc.abeSigns) q.set('abe', '1');
+
+  return (
+    <div className="rounded-xl border border-photo/40 bg-photo/6 p-3 text-sm">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-photo">Engine read-out — {t.phototherapyCurveLabel}</p>
+      <div className="tabular grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
+        <span>
+          Phototherapy <strong>{formatBili(t.phototherapy.value, unit)}</strong>
+        </span>
+        <span>
+          Escalation <strong>{formatBili(t.escalation.value, unit)}</strong>
+        </span>
+        <span>
+          Exchange <strong>{formatBili(t.exchange.value, unit)}</strong>
+        </span>
+        {a.rate && (
+          <span>
+            Rise <strong>{a.rate.mgdlPerHour.toFixed(2)} mg/dL/h</strong>
+          </span>
+        )}
+      </div>
+      <Link to={`/calculator?${q.toString()}`} className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-photo hover:underline">
+        <Calculator className="h-3.5 w-3.5" /> Open in calculator
+      </Link>
+    </div>
+  );
 }
 
-const cases: CaseStudy[] = [
-  {
-    id: 'case1',
-    title: 'Term Newborn with Early Jaundice',
-    difficulty: 'beginner',
-    presentation: 'A 20-hour-old term male infant (39 weeks gestation, birth weight 3.5 kg) develops visible jaundice. He was born via normal spontaneous vaginal delivery without complications. Mother is O+, baby is A+. The infant is breastfeeding every 2-3 hours with good latch.',
-    vitals: {
-      'Temperature': '37.0°C',
-      'HR': '145 bpm',
-      'RR': '42/min',
-      'Weight': '3.5 kg (no change from birth)'
-    },
-    labs: {
-      'Total bilirubin': '9.5 mg/dL',
-      'Direct bilirubin': '0.3 mg/dL',
-      'Blood type': 'A+',
-      'Coombs (DAT)': 'Positive',
-      'Hematocrit': '52%',
-      'Reticulocytes': '5%'
-    },
-    questions: [
-      {
-        question: 'What is the most concerning feature of this presentation?',
-        options: [
-          'The total bilirubin level',
-          'Jaundice appearing before 24 hours of life',
-          'Positive Coombs test',
-          'Reticulocyte count'
-        ],
-        correctAnswer: 1,
-        explanation: 'Jaundice appearing within the first 24 hours of life is ALWAYS pathologic and requires immediate evaluation. This is the most important red flag.'
-      },
-      {
-        question: 'What is the most likely diagnosis?',
-        options: [
-          'Physiologic jaundice',
-          'Breast milk jaundice',
-          'ABO incompatibility',
-          'G6PD deficiency'
-        ],
-        correctAnswer: 2,
-        explanation: 'ABO incompatibility is the most likely diagnosis given: mother O+ and baby A+, positive Coombs test, early onset jaundice, and elevated reticulocytes indicating hemolysis.'
-      },
-      {
-        question: 'What is the most appropriate next step?',
-        options: [
-          'Reassurance and routine follow-up',
-          'Start phototherapy immediately',
-          'Prepare for exchange transfusion',
-          'Stop breastfeeding'
-        ],
-        correctAnswer: 1,
-        explanation: 'At 20 hours with bilirubin of 9.5 mg/dL and ABO incompatibility, phototherapy should be started. The infant is in a high-risk category (isoimmune hemolysis), and the bilirubin is likely rising.'
-      }
-    ],
-    diagnosis: 'ABO Incompatibility',
-    keyLearning: [
-      'Jaundice <24 hours is always pathologic',
-      'ABO incompatibility: Mother O, baby A or B',
-      'Positive Coombs test indicates immune-mediated hemolysis',
-      'Early intervention with phototherapy prevents severe hyperbilirubinemia'
-    ]
-  },
-  {
-    id: 'case2',
-    title: 'Breastfed Infant with Prolonged Jaundice',
-    difficulty: 'intermediate',
-    presentation: 'A 3-week-old term female infant presents for well-child visit. Parents report persistent yellow skin color. The infant is exclusively breastfed, feeding 8-10 times daily with good weight gain (birth weight 3.2 kg, current weight 3.8 kg). Stools are yellow and frequent. No fever or illness.',
-    vitals: {
-      'Temperature': '36.8°C',
-      'Weight': '3.8 kg (19% gain from birth)',
-      'Activity': 'Alert and active'
-    },
-    labs: {
-      'Total bilirubin': '11 mg/dL',
-      'Direct bilirubin': '0.6 mg/dL',
-      'Blood type': 'O+',
-      'Coombs': 'Negative'
-    },
-    questions: [
-      {
-        question: 'What is the most important initial step?',
-        options: [
-          'Start phototherapy',
-          'Check direct bilirubin percentage',
-          'Recommend formula supplementation',
-          'Reassure parents this is normal'
-        ],
-        correctAnswer: 1,
-        explanation: 'First, confirm this is unconjugated (indirect) hyperbilirubinemia. Direct bilirubin 0.6 mg/dL is <20% of total (5.5%), ruling out cholestasis - the most critical condition to exclude.'
-      },
-      {
-        question: 'What is the most likely diagnosis?',
-        options: [
-          'Breastfeeding failure jaundice',
-          'Breast milk jaundice',
-          'Biliary atresia',
-          'Hypothyroidism'
-        ],
-        correctAnswer: 1,
-        explanation: 'Breast milk jaundice: prolonged unconjugated hyperbilirubinemia (peaks 2-3 weeks) in a thriving, exclusively breastfed infant with excellent weight gain. Breastfeeding failure would show poor weight gain.'
-      },
-      {
-        question: 'What is the appropriate management?',
-        options: [
-          'Continue breastfeeding and monitor',
-          'Stop breastfeeding for 24-48 hours',
-          'Start phototherapy',
-          'Urgent hepatology referral'
-        ],
-        correctAnswer: 0,
-        explanation: 'Breast milk jaundice is benign. Continue breastfeeding (provides nutritional and immunological benefits). Monitor clinically. Phototherapy rarely needed. Jaundice will gradually resolve over weeks to months.'
-      }
-    ],
-    diagnosis: 'Breast Milk Jaundice',
-    keyLearning: [
-      'Breast milk jaundice: prolonged (2-3 weeks), thriving infant, good weight gain',
-      'Distinguished from breastfeeding failure jaundice (poor intake, weight loss)',
-      'Always check direct bilirubin in prolonged jaundice to rule out cholestasis',
-      'Management: continue breastfeeding, reassure parents, monitor'
-    ]
-  },
-  {
-    id: 'case3',
-    title: 'Infant with Pale Stools',
-    difficulty: 'advanced',
-    presentation: 'A 5-week-old term male presents with persistent jaundice and parents report pale, clay-colored stools for the past week. Birth history unremarkable. Initially breastfed but now receiving formula due to maternal illness. Dark yellow urine noted.',
-    vitals: {
-      'Weight': '4.1 kg (adequate gain)',
-      'Liver': 'Palpable 2 cm below costal margin, firm'
-    },
-    labs: {
-      'Total bilirubin': '8.5 mg/dL',
-      'Direct bilirubin': '5.2 mg/dL',
-      'ALT': '145 U/L',
-      'AST': '178 U/L',
-      'GGT': '285 U/L',
-      'Alkaline phosphatase': '450 U/L'
-    },
-    questions: [
-      {
-        question: 'What is the most critical diagnosis to rule out?',
-        options: [
-          'Breast milk jaundice',
-          'Biliary atresia',
-          'Viral hepatitis',
-          'Physiologic jaundice'
-        ],
-        correctAnswer: 1,
-        explanation: 'Biliary atresia is the most critical diagnosis. Acholic stools + conjugated hyperbilirubinemia = cholestasis = URGENT evaluation. Biliary atresia requires surgery (Kasai procedure) before 60 days for optimal outcomes.'
-      },
-      {
-        question: 'What findings confirm conjugated hyperbilirubinemia?',
-        options: [
-          'Total bilirubin >5 mg/dL',
-          'Direct bilirubin 5.2 mg/dL (61% of total)',
-          'Elevated liver enzymes',
-          'Hepatomegaly'
-        ],
-        correctAnswer: 1,
-        explanation: 'Direct bilirubin >1 mg/dL OR >20% of total indicates conjugated hyperbilirubinemia (cholestasis). Here, direct is 5.2 mg/dL and 61% of total - clearly cholestatic.'
-      },
-      {
-        question: 'What is the most appropriate next step?',
-        options: [
-          'Routine follow-up in 2 weeks',
-          'Start phototherapy',
-          'Urgent hepatology/GI referral and hepatobiliary imaging',
-          'Recommend formula supplementation'
-        ],
-        correctAnswer: 2,
-        explanation: 'Cholestasis requires URGENT evaluation. Order hepatic ultrasound, consider HIDA scan. Immediate hepatology/GI/surgery referral. Biliary atresia must be identified and treated before 60 days of life.'
-      }
-    ],
-    diagnosis: 'Cholestatic Jaundice (Biliary Atresia suspected)',
-    keyLearning: [
-      'Acholic stools + jaundice = cholestasis = URGENT',
-      'Direct bilirubin >1 mg/dL or >20% of total = conjugated hyperbilirubinemia',
-      'Biliary atresia requires Kasai procedure before 60 days',
-      'Never delay evaluation of conjugated hyperbilirubinemia',
-      'Dark urine + pale stools = bile not reaching intestine'
-    ]
+function Player({ c }: { c: ClinicalCase }) {
+  const navigate = useNavigate();
+  const recordCase = useApp((s) => s.recordCase);
+  const [i, setI] = useState(0);
+  const [sel, setSel] = useState<number[]>([]);
+  const [submitted, setSubmitted] = useState(false);
+  const [scores, setScores] = useState<boolean[]>([]);
+  const step = c.steps[i];
+  const finished = i >= c.steps.length;
+  const order = useMemo(() => (step ? permutation(step.options.length, `${c.id}:${i}`) : []), [c.id, i, step]);
+
+  const isRight = (picked: number[]) => {
+    const correct = step.options.map((o, j) => (o.correct ? j : -1)).filter((j) => j >= 0);
+    return picked.length === correct.length && correct.every((j) => picked.includes(j));
+  };
+
+  const submit = (picked: number[]) => {
+    setSel(picked);
+    setSubmitted(true);
+    const ok = isRight(picked);
+    const next = [...scores];
+    next[i] = ok;
+    setScores(next);
+    if (i === c.steps.length - 1) recordCase(c.id, Math.round((next.filter(Boolean).length / c.steps.length) * 100));
+  };
+
+  const advance = () => {
+    setI((x) => x + 1);
+    setSel([]);
+    setSubmitted(false);
+  };
+
+  if (finished) {
+    const n = scores.filter(Boolean).length;
+    return (
+      <Card>
+        <h2 className="text-2xl font-bold">Case complete</h2>
+        <p className="mt-1 text-muted">
+          First-attempt decisions correct: <strong className="text-fg">{n}/{c.steps.length}</strong>
+        </p>
+        <h3 className="mt-5 font-bold">Take-aways</h3>
+        <ul className="mt-2 space-y-1.5">
+          {c.takeaways.map((t) => (
+            <li key={t} className="flex gap-2 text-sm">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-ok" /> {t}
+            </li>
+          ))}
+        </ul>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setI(0);
+              setScores([]);
+              setSel([]);
+              setSubmitted(false);
+            }}
+          >
+            <RotateCcw className="h-4 w-4" /> Replay
+          </Button>
+          <Button onClick={() => navigate('/cases')}>All cases</Button>
+        </div>
+      </Card>
+    );
   }
-];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2" aria-label={`Step ${i + 1} of ${c.steps.length}`}>
+        {c.steps.map((_, j) => (
+          <span key={j} className={cn('h-1.5 flex-1 rounded-full', j < i ? (scores[j] ? 'bg-ok' : 'bg-esc') : j === i ? 'bg-brand' : 'bg-surface-2')} />
+        ))}
+      </div>
+      <Card>
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand-strong">
+          Step {i + 1} of {c.steps.length} · {step.title}
+        </p>
+        <p className="mt-2 text-base">{step.narrative}</p>
+        {step.data && (
+          <dl className="tabular mt-3 grid grid-cols-1 gap-x-6 gap-y-1 rounded-xl bg-surface-2/60 p-3 text-sm sm:grid-cols-2">
+            {step.data.map(([k, v]) => (
+              <div key={k} className="flex justify-between gap-3">
+                <dt className="text-muted">{k}</dt>
+                <dd className="font-medium">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+        {step.calc && submitted && (
+          <div className="mt-3">
+            <CalcPanel calc={step.calc} />
+          </div>
+        )}
+
+        <p className="mt-5 font-semibold">{step.question}</p>
+        {step.multi && <p className="text-xs text-muted">Select all that apply, then submit.</p>}
+        <ul className="mt-3 space-y-2">
+          {order.map((j) => {
+            const o = step.options[j];
+            const picked = sel.includes(j);
+            const Icon = submitted ? (o.correct ? CheckCircle2 : picked ? XCircle : step.multi ? Square : Circle) : step.multi ? (picked ? SquareCheck : Square) : Circle;
+            return (
+              <li key={j}>
+                <button
+                  type="button"
+                  disabled={submitted}
+                  aria-pressed={picked}
+                  onClick={() => (step.multi ? setSel((s) => (s.includes(j) ? s.filter((x) => x !== j) : [...s, j])) : submit([j]))}
+                  className={cn(
+                    'flex w-full items-start gap-3 rounded-xl border p-3 text-left text-sm transition-colors',
+                    !submitted && (picked ? 'border-brand bg-brand/10' : 'border-border hover:border-brand hover:bg-surface-2'),
+                    submitted && o.correct && 'border-ok bg-ok/10',
+                    submitted && !o.correct && picked && 'border-exch bg-exch/10',
+                    submitted && !o.correct && !picked && 'border-border opacity-70',
+                  )}
+                >
+                  <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', submitted && o.correct ? 'text-ok' : submitted && picked ? 'text-exch' : 'text-muted')} aria-hidden />
+                  <span>
+                    {o.text}
+                    {submitted && (picked || o.correct) && <span className="mt-1 block text-xs text-muted">{o.feedback}</span>}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        {step.multi && !submitted && (
+          <Button className="mt-3" disabled={!sel.length} onClick={() => submit(sel)}>
+            Submit
+          </Button>
+        )}
+        {submitted && (
+          <div role="status" className={cn('mt-4 rounded-xl border p-3 text-sm', isRight(sel) ? 'border-ok/50 bg-ok/8' : 'border-esc/50 bg-esc/8')}>
+            <p className="font-semibold">{isRight(sel) ? 'Good decision.' : 'Review this one.'}</p>
+            <p className="mt-1">
+              {step.teaching}
+              {step.refs && <Cite ids={step.refs} />}
+            </p>
+          </div>
+        )}
+        {submitted && (
+          <div className="mt-4 flex justify-end">
+            <Button onClick={advance}>
+              {i === c.steps.length - 1 ? 'Finish case' : 'Next step'} <ArrowRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </Card>
+    </div>
+  );
+}
 
 export default function CasesPage() {
-  const [selectedCase, setSelectedCase] = useState<string | null>(null);
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selectedAnswers, setSelectedAnswers] = useState<number[]>([]);
-  const [showExplanation, setShowExplanation] = useState(false);
+  const { caseId } = useParams();
+  const done = useApp((s) => s.casesDone);
+  const c = CASES.find((x) => x.id === caseId);
 
-  const currentCaseData = cases.find(c => c.id === selectedCase);
-
-  const handleCaseSelect = (caseId: string) => {
-    setSelectedCase(caseId);
-    setCurrentQuestion(0);
-    setSelectedAnswers([]);
-    setShowExplanation(false);
-  };
-
-  const handleAnswerSelect = (answerIndex: number) => {
-    const newAnswers = [...selectedAnswers];
-    newAnswers[currentQuestion] = answerIndex;
-    setSelectedAnswers(newAnswers);
-    setShowExplanation(true);
-  };
-
-  const handleNextQuestion = () => {
-    if (currentCaseData && currentQuestion < currentCaseData.questions.length - 1) {
-      setCurrentQuestion(currentQuestion + 1);
-      setShowExplanation(false);
-    }
-  };
-
-  const getDifficultyColor = (difficulty: string) => {
-    if (difficulty === 'beginner') return 'success';
-    if (difficulty === 'intermediate') return 'warning';
-    return 'destructive';
-  };
-
-  if (!selectedCase) {
+  if (c) {
     return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Case Studies</h1>
-          <p className="text-muted-foreground">
-            Interactive clinical cases to develop diagnostic and management skills
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-4">
-          {cases.map((caseStudy) => (
-            <Card key={caseStudy.id} className="hover:border-primary transition-colors">
-              <CardHeader>
-                <div className="flex items-start justify-between mb-2">
-                  <CardTitle className="text-lg">{caseStudy.title}</CardTitle>
-                  <Badge variant={getDifficultyColor(caseStudy.difficulty)}>
-                    {caseStudy.difficulty}
-                  </Badge>
-                </div>
-                <CardDescription>{caseStudy.presentation.slice(0, 150)}...</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button onClick={() => handleCaseSelect(caseStudy.id)} className="w-full">
-                  Start Case
-                  <ChevronRight className="ml-2 h-4 w-4" />
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+      <div className="space-y-6">
+        <Link to="/cases" className="inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-fg">
+          <ArrowLeft className="h-4 w-4" /> All cases
+        </Link>
+        <header>
+          <div className="flex flex-wrap gap-2">
+            <Badge tone={c.level === 'Advanced' ? 'esc' : 'brand'}>{c.level}</Badge>
+            {c.tags.map((t) => (
+              <Badge key={t}>{t}</Badge>
+            ))}
+          </div>
+          <h1 className="mt-2 text-3xl font-extrabold tracking-tight">{c.title}</h1>
+          <p className="mt-1 text-muted">{c.hook}</p>
+        </header>
+        <Player key={c.id} c={c} />
       </div>
     );
   }
 
-  if (!currentCaseData) return null;
-
-  const currentQ = currentCaseData.questions[currentQuestion];
-  const isCorrect = selectedAnswers[currentQuestion] === currentQ.correctAnswer;
-  const allQuestionsAnswered = selectedAnswers.length === currentCaseData.questions.length;
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">{currentCaseData.title}</h1>
-          <Badge variant={getDifficultyColor(currentCaseData.difficulty)} className="mt-2">
-            {currentCaseData.difficulty}
-          </Badge>
-        </div>
-        <Button variant="outline" onClick={() => setSelectedCase(null)}>
-          Back to Cases
-        </Button>
-      </div>
-
-      {/* Presentation */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Case Presentation</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm">{currentCaseData.presentation}</p>
-
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <h4 className="font-semibold mb-2 text-sm">Vitals/Physical Exam</h4>
-              <div className="text-sm space-y-1">
-                {Object.entries(currentCaseData.vitals).map(([key, value]) => (
-                  <div key={key} className="flex justify-between">
-                    <span className="text-muted-foreground">{key}:</span>
-                    <span className="font-medium">{value}</span>
-                  </div>
+    <div>
+      <PageHeader
+        title="Clinical cases"
+        lead="Make the call at each step. Numbers are computed live by the same engine as the calculator, so the reasoning always matches the guideline."
+      />
+      <ul className="grid gap-3 md:grid-cols-2">
+        {CASES.map((x) => (
+          <li key={x.id}>
+            <Link to={`/cases/${x.id}`} className="flex h-full flex-col rounded-2xl border border-border bg-surface p-5 hover:border-brand">
+              <span className="flex flex-wrap items-center gap-2">
+                <Badge tone={x.level === 'Advanced' ? 'esc' : 'brand'}>{x.level}</Badge>
+                {done[x.id] != null && <Badge tone="ok">Done · {done[x.id]}%</Badge>}
+              </span>
+              <span className="mt-2 text-lg font-bold">{x.title}</span>
+              <span className="mt-1 text-sm text-muted">{x.hook}</span>
+              <span className="mt-3 flex flex-wrap gap-1.5">
+                {x.tags.map((t) => (
+                  <Badge key={t}>{t}</Badge>
                 ))}
-              </div>
-            </div>
-
-            {currentCaseData.labs && (
-              <div>
-                <h4 className="font-semibold mb-2 text-sm">Laboratory Results</h4>
-                <div className="text-sm space-y-1">
-                  {Object.entries(currentCaseData.labs).map(([key, value]) => (
-                    <div key={key} className="flex justify-between">
-                      <span className="text-muted-foreground">{key}:</span>
-                      <span className="font-medium">{value}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Question */}
-      <Card className="border-primary">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>
-              Question {currentQuestion + 1} of {currentCaseData.questions.length}
-            </CardTitle>
-            <Badge variant="outline">
-              {selectedAnswers.filter((_, i) => i <= currentQuestion).length}/{currentCaseData.questions.length} answered
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="font-medium">{currentQ.question}</p>
-
-          <div className="space-y-2">
-            {currentQ.options.map((option, index) => {
-              const isSelected = selectedAnswers[currentQuestion] === index;
-              const isCorrectOption = index === currentQ.correctAnswer;
-              const showResult = showExplanation;
-
-              return (
-                <button
-                  key={index}
-                  onClick={() => handleAnswerSelect(index)}
-                  disabled={showExplanation}
-                  className={`w-full p-3 rounded-lg border text-left transition-colors ${
-                    showResult && isCorrectOption
-                      ? 'border-green-500 bg-green-500/10'
-                      : showResult && isSelected && !isCorrect
-                      ? 'border-red-500 bg-red-500/10'
-                      : isSelected
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">{option}</span>
-                    {showResult && isCorrectOption && (
-                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    )}
-                    {showResult && isSelected && !isCorrect && (
-                      <XCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-                    )}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-
-          {showExplanation && (
-            <div className={`p-4 rounded-lg border ${isCorrect ? 'border-green-500 bg-green-500/10' : 'border-red-500 bg-red-500/10'}`}>
-              <p className="font-semibold mb-2">
-                {isCorrect ? 'Correct!' : 'Incorrect'}
-              </p>
-              <p className="text-sm">{currentQ.explanation}</p>
-            </div>
-          )}
-
-          {showExplanation && currentQuestion < currentCaseData.questions.length - 1 && (
-            <Button onClick={handleNextQuestion} className="w-full">
-              Next Question
-              <ChevronRight className="ml-2 h-4 w-4" />
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Summary */}
-      {allQuestionsAnswered && currentQuestion === currentCaseData.questions.length - 1 && showExplanation && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Case Summary</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-semibold mb-2">Diagnosis</h4>
-              <p className="text-sm">{currentCaseData.diagnosis}</p>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-2">Key Learning Points</h4>
-              <ul className="space-y-1">
-                {currentCaseData.keyLearning.map((point, idx) => (
-                  <li key={idx} className="text-sm flex items-start gap-2">
-                    <span className="text-primary mt-1">•</span>
-                    <span>{point}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="pt-4 border-t">
-              <p className="text-sm font-medium mb-2">
-                Score: {selectedAnswers.filter((ans, i) => ans === currentCaseData.questions[i].correctAnswer).length}/{currentCaseData.questions.length}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

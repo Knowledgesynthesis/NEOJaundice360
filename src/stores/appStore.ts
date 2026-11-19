@@ -1,68 +1,78 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { UserProgress } from '@/types';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import type { BiliUnit } from '@/lib/bili/units';
 
-interface AppState {
-  darkMode: boolean;
-  userProgress: UserProgress[];
-  completedAssessments: string[];
-  toggleDarkMode: () => void;
-  updateProgress: (moduleId: string, completed: boolean, score?: number) => void;
-  completeAssessment: (assessmentId: string) => void;
-  getModuleProgress: (moduleId: string) => UserProgress | undefined;
+export type Theme = 'dark' | 'light' | 'system';
+
+interface QuestionStat {
+  attempts: number;
+  correct: number;
+  lastCorrect: boolean;
 }
 
-export const useAppStore = create<AppState>()(
+interface AppState {
+  theme: Theme;
+  unit: BiliUnit;
+  completed: Record<string, boolean>;
+  questionStats: Record<string, QuestionStat>;
+  casesDone: Record<string, number>; // case id → score %
+  setTheme: (t: Theme) => void;
+  setUnit: (u: BiliUnit) => void;
+  toggleComplete: (id: string, value?: boolean) => void;
+  recordAnswer: (questionId: string, correct: boolean) => void;
+  recordCase: (caseId: string, scorePct: number) => void;
+  resetProgress: () => void;
+}
+
+/** localStorage can throw (private mode, blocked storage) — fall back to memory. */
+const safeStorage = createJSONStorage(() => {
+  try {
+    const k = '__nj360_probe__';
+    window.localStorage.setItem(k, '1');
+    window.localStorage.removeItem(k);
+    return window.localStorage;
+  } catch {
+    const mem = new Map<string, string>();
+    return {
+      getItem: (n: string) => mem.get(n) ?? null,
+      setItem: (n: string, v: string) => void mem.set(n, v),
+      removeItem: (n: string) => void mem.delete(n),
+    };
+  }
+});
+
+export const useApp = create<AppState>()(
   persist(
-    (set, get) => ({
-      darkMode: true, // Default to dark mode as per requirements
-      userProgress: [],
-      completedAssessments: [],
-
-      toggleDarkMode: () => {
-        set((state) => ({ darkMode: !state.darkMode }));
-        // Update document class for dark mode
-        if (get().darkMode) {
-          document.documentElement.classList.remove('dark');
-        } else {
-          document.documentElement.classList.add('dark');
-        }
-      },
-
-      updateProgress: (moduleId, completed, score) => {
-        set((state) => {
-          const existingProgress = state.userProgress.find(p => p.moduleId === moduleId);
-          if (existingProgress) {
-            return {
-              userProgress: state.userProgress.map(p =>
-                p.moduleId === moduleId
-                  ? { ...p, completed, score, lastAccessed: new Date() }
-                  : p
-              ),
-            };
-          } else {
-            return {
-              userProgress: [
-                ...state.userProgress,
-                { moduleId, completed, score, lastAccessed: new Date() },
-              ],
-            };
-          }
-        });
-      },
-
-      completeAssessment: (assessmentId) => {
-        set((state) => ({
-          completedAssessments: [...state.completedAssessments, assessmentId],
-        }));
-      },
-
-      getModuleProgress: (moduleId) => {
-        return get().userProgress.find(p => p.moduleId === moduleId);
-      },
+    (set) => ({
+      theme: 'system',
+      unit: 'mgdl',
+      completed: {},
+      questionStats: {},
+      casesDone: {},
+      setTheme: (theme) => set({ theme }),
+      setUnit: (unit) => set({ unit }),
+      toggleComplete: (id, value) =>
+        set((s) => ({ completed: { ...s.completed, [id]: value ?? !s.completed[id] } })),
+      recordAnswer: (id, correct) =>
+        set((s) => {
+          const prev = s.questionStats[id] ?? { attempts: 0, correct: 0, lastCorrect: false };
+          return {
+            questionStats: {
+              ...s.questionStats,
+              [id]: { attempts: prev.attempts + 1, correct: prev.correct + (correct ? 1 : 0), lastCorrect: correct },
+            },
+          };
+        }),
+      recordCase: (caseId, scorePct) => set((s) => ({ casesDone: { ...s.casesDone, [caseId]: scorePct } })),
+      resetProgress: () => set({ completed: {}, questionStats: {}, casesDone: {} }),
     }),
-    {
-      name: 'neojaundice360-storage',
-    }
-  )
+    { name: 'nj360', version: 2, storage: safeStorage },
+  ),
 );
+
+export function applyTheme(theme: Theme) {
+  const dark =
+    theme === 'dark' || (theme === 'system' && window.matchMedia?.('(prefers-color-scheme: dark)').matches);
+  document.documentElement.classList.toggle('dark', !!dark);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0b0f17' : '#f6f5f1');
+}

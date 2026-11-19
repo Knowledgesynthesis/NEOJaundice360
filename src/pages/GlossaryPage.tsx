@@ -1,137 +1,71 @@
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { glossaryTerms, searchGlossary, getGlossaryCategories } from '@/data/glossary';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router';
 import { Search } from 'lucide-react';
+import { GLOSSARY, type Term } from '@/data/glossary';
+import { Badge, PageHeader } from '@/components/ui';
+import { cn } from '@/lib/cn';
+
+const CATS: ('All' | Term['category'])[] = ['All', 'Physiology', 'Measurement', 'Causes', 'Treatment', 'Neurotoxicity', 'Cholestasis'];
 
 export default function GlossaryPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('All');
-
-  const categories = ['All', ...getGlossaryCategories()];
-
-  const filteredTerms = glossaryTerms.filter(term => {
-    const matchesSearch = searchTerm === '' || searchGlossary(searchTerm).includes(term);
-    const matchesCategory = selectedCategory === 'All' || term.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
-
-  const sortedTerms = [...filteredTerms].sort((a, b) => a.term.localeCompare(b.term));
+  const [q, setQ] = useState('');
+  const [cat, setCat] = useState<(typeof CATS)[number]>('All');
+  const list = useMemo(() => {
+    const s = q.trim().toLowerCase();
+    return GLOSSARY.filter((t) => (cat === 'All' || t.category === cat) && (!s || (t.term + ' ' + t.def).toLowerCase().includes(s))).sort((a, b) =>
+      a.term.localeCompare(b.term),
+    );
+  }, [q, cat]);
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl md:text-4xl font-bold mb-2">Glossary</h1>
-        <p className="text-muted-foreground">
-          Quick reference for key terms and concepts
-        </p>
+    <div>
+      <PageHeader title="Glossary" lead={`${GLOSSARY.length} terms, each defined the way current guidelines use them.`} />
+      <div className="mb-4 space-y-3">
+        <label className="relative block">
+          <span className="sr-only">Search terms</span>
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" aria-hidden />
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search terms or definitions"
+            className="min-h-11 w-full rounded-xl border border-border bg-surface pl-9 pr-3"
+          />
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {CATS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-pressed={cat === c}
+              onClick={() => setCat(c)}
+              className={cn('min-h-9 rounded-full border px-3 text-sm', cat === c ? 'border-brand bg-brand/15 font-semibold' : 'border-border hover:bg-surface-2')}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
       </div>
-
-      {/* Search and Filter */}
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search terms..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-md border bg-background"
-            />
+      <p className="mb-3 text-xs text-muted" aria-live="polite">
+        {list.length} term{list.length === 1 ? '' : 's'}
+      </p>
+      <dl className="divide-y divide-border rounded-2xl border border-border bg-surface">
+        {list.map((t) => (
+          <div key={t.term} className="p-4">
+            <dt className="flex flex-wrap items-center gap-2 font-bold">
+              {t.term} <Badge>{t.category}</Badge>
+            </dt>
+            <dd className="mt-1 text-sm">
+              {t.def}{' '}
+              {t.see && (
+                <Link to={t.see} className="font-semibold text-brand-strong hover:underline">
+                  Learn more →
+                </Link>
+              )}
+            </dd>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            {categories.map((category) => (
-              <Badge
-                key={category}
-                variant={selectedCategory === category ? 'default' : 'outline'}
-                className="cursor-pointer"
-                onClick={() => setSelectedCategory(category)}
-              >
-                {category}
-              </Badge>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Results Count */}
-      <div className="text-sm text-muted-foreground">
-        Showing {sortedTerms.length} of {glossaryTerms.length} terms
-      </div>
-
-      {/* Glossary Terms */}
-      <div className="space-y-4">
-        {sortedTerms.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              No terms found matching your search.
-            </CardContent>
-          </Card>
-        ) : (
-          sortedTerms.map((term) => (
-            <Card key={term.term} className="hover:border-primary transition-colors">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg">{term.term}</CardTitle>
-                  <Badge variant="outline">{term.category}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm">{term.definition}</p>
-                {term.relatedTerms && term.relatedTerms.length > 0 && (
-                  <div>
-                    <p className="text-sm font-medium mb-2">Related Terms:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {term.relatedTerms.map((related) => (
-                        <Badge
-                          key={related}
-                          variant="secondary"
-                          className="text-xs cursor-pointer"
-                          onClick={() => setSearchTerm(related)}
-                        >
-                          {related}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))
-        )}
-      </div>
-
-      {/* Categories Legend */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Categories</CardTitle>
-          <CardDescription>Term categories in this glossary</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 gap-2 text-sm">
-            <div>
-              <strong>Basic:</strong> Fundamental concepts and definitions
-            </div>
-            <div>
-              <strong>Physiology:</strong> Bilirubin metabolism and pathways
-            </div>
-            <div>
-              <strong>Etiology:</strong> Causes and types of jaundice
-            </div>
-            <div>
-              <strong>Diagnosis:</strong> Diagnostic tests and findings
-            </div>
-            <div>
-              <strong>Management:</strong> Treatment modalities
-            </div>
-            <div>
-              <strong>Complications:</strong> Adverse outcomes and risks
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        ))}
+        {!list.length && <p className="p-6 text-center text-sm text-muted">No matching terms.</p>}
+      </dl>
     </div>
   );
 }
