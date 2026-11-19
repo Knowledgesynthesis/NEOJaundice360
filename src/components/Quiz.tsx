@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { permutation } from '@/lib/shuffle';
 import { Link } from 'react-router';
 import { ArrowRight, CheckCircle2, Circle, XCircle } from 'lucide-react';
 import type { ModuleId, Question } from '@/data/questions';
@@ -22,8 +23,10 @@ export function QuestionCard({
 }) {
   const [picked, setPicked] = useState<number | null>(null);
   const record = useApp((s) => s.recordAnswer);
+  const [order] = useState(() => (q.ordered ? q.options.map((_, i) => i) : permutation(q.options.length, q.id)));
   const done = picked !== null;
   const correct = picked === q.answer;
+  const answerLetter = String.fromCharCode(65 + order.indexOf(q.answer));
 
   const pick = (i: number) => {
     if (done) return;
@@ -41,7 +44,8 @@ export function QuestionCard({
       )}
       <p className="font-semibold text-pretty">{q.stem}</p>
       <ol className="space-y-2" aria-label="Answer options">
-        {q.options.map((o, i) => {
+        {order.map((i, pos) => {
+          const o = q.options[i];
           const isAns = i === q.answer;
           const isPick = i === picked;
           return (
@@ -69,7 +73,7 @@ export function QuestionCard({
                   )}
                 </span>
                 <span>
-                  <span className="mr-1 font-semibold">{String.fromCharCode(65 + i)}.</span>
+                  <span className="mr-1 font-semibold">{String.fromCharCode(65 + pos)}.</span>
                   {o}
                 </span>
               </button>
@@ -79,7 +83,7 @@ export function QuestionCard({
       </ol>
       {done && (
         <div role="status" className={cn('rounded-xl border p-3 text-sm', correct ? 'border-ok/50 bg-ok/8' : 'border-esc/50 bg-esc/8')}>
-          <p className="font-semibold">{correct ? 'Correct.' : `Not quite — the answer is ${String.fromCharCode(65 + q.answer)}.`}</p>
+          <p className="font-semibold">{correct ? 'Correct.' : `Not quite — the answer is ${answerLetter}.`}</p>
           <p className="mt-1">
             {q.explanation}
             <Cite ids={q.refs} />

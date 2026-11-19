@@ -154,14 +154,21 @@ export default function Layout({ children }: { children: ReactNode }) {
   }, [theme]);
 
   useEffect(() => {
-    if (hash) {
-      const el = document.getElementById(decodeURIComponent(hash.slice(1)));
-      if (el) {
-        el.scrollIntoView({ block: 'start' });
-        return;
-      }
+    if (!hash) {
+      window.scrollTo(0, 0);
+      return;
     }
-    window.scrollTo(0, 0);
+    // Pages are lazy-loaded: wait (briefly) for the anchor target to mount.
+    const id = decodeURIComponent(hash.slice(1));
+    let tries = 0;
+    let raf = 0;
+    const seek = () => {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ block: 'start' });
+      else if (tries++ < 120) raf = requestAnimationFrame(seek);
+    };
+    seek();
+    return () => cancelAnimationFrame(raf);
   }, [pathname, hash]);
 
   useEffect(() => {

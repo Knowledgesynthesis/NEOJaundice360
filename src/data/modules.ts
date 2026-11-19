@@ -54,7 +54,7 @@ export const MODULES: LearningModule[] = [
     id: 'thresholds',
     path: '/thresholds',
     step: 4,
-    title: 'Thresholds & follow-up calculator',
+    title: 'Thresholds & follow-up',
     summary: 'AAP 2022 curves, escalation, distance-to-threshold follow-up, NICE and preterm tables.',
     minutes: 25,
     objectives: [

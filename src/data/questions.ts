@@ -16,12 +16,15 @@ export interface Question {
   answer: number;
   explanation: string;
   refs: string[];
+  /** Options form a natural scale — keep their order instead of shuffling. */
+  ordered?: boolean;
 }
 
 export const QUESTIONS: Question[] = [
   /* ------------------------------- PHYSIOLOGY ------------------------------- */
   {
     id: 'p1',
+    ordered: true,
     module: 'physiology',
     level: 1,
     stem: 'Catabolism of 1 g of hemoglobin produces approximately how much bilirubin?',
@@ -55,6 +58,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 'p4',
+    ordered: true,
     module: 'physiology',
     level: 1,
     stem: 'At term, hepatic UGT1A1 activity is approximately what fraction of adult activity?',
@@ -97,6 +101,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 'p7',
+    ordered: true,
     module: 'physiology',
     level: 1,
     stem: 'Which spectrum is most effective for phototherapy?',
@@ -369,6 +374,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 't4',
+    ordered: true,
     module: 'thresholds',
     level: 2,
     stem: 'Pre-discharge TSB is 4.0 mg/dL below the phototherapy threshold at 40 h. Follow-up?',
@@ -394,6 +400,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 't6',
+    ordered: true,
     module: 'thresholds',
     level: 2,
     stem: 'A 38-week infant has isoimmune hemolysis. Which bilirubin/albumin ratio (mg/dL ÷ g/dL) supports exchange transfusion?',
@@ -420,6 +427,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 't8',
+    ordered: true,
     module: 'thresholds',
     level: 2,
     stem: 'An infant born at 32 0/7 weeks is now 3 days old. Using the Maisels 2012 approach, what TSB range should prompt phototherapy?',
@@ -431,6 +439,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 't9',
+    ordered: true,
     module: 'thresholds',
     level: 1,
     stem: 'A UK laboratory reports bilirubin 257 µmol/L. Approximately what is this in mg/dL?',
@@ -441,6 +450,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 't10',
+    ordered: true,
     module: 'thresholds',
     level: 1,
     stem: 'For a baby ≥38 weeks aged ≥96 h, the NICE CG98 thresholds are:',
@@ -474,6 +484,7 @@ export const QUESTIONS: Question[] = [
   /* -------------------------------- TREATMENT -------------------------------- */
   {
     id: 'r1',
+    ordered: true,
     module: 'treatment',
     level: 1,
     stem: '“Intensive phototherapy” in AAP 2022 means irradiance of at least:',
@@ -537,6 +548,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 'r6',
+    ordered: true,
     module: 'treatment',
     level: 2,
     stem: 'A double-volume exchange transfusion in a term infant uses about:',
@@ -612,6 +624,7 @@ export const QUESTIONS: Question[] = [
   /* ------------------------------ NEUROTOXICITY ------------------------------ */
   {
     id: 'n1',
+    ordered: true,
     module: 'neurotoxicity',
     level: 2,
     stem: 'Lethargy with poor suck (2), hypertonia alternating with hypotonia and arching on stimulation (2), and a high-pitched cry (1) give a BIND score of 5. This indicates:',
@@ -700,6 +713,7 @@ export const QUESTIONS: Question[] = [
   },
   {
     id: 'h3',
+    ordered: true,
     module: 'cholestasis',
     level: 1,
     stem: 'Kasai portoenterostomy outcomes are best when performed:',

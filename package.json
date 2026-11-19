@@ -4,6 +4,9 @@
   "private": true,
   "description": "Evidence-based, interactive mastery course on newborn jaundice (AAP 2022, NICE CG98, AAP 2025 biliary atresia guidance)",
   "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { permutation } from '@/lib/shuffle';
 import { Link, useNavigate, useParams } from 'react-router';
 import { ArrowLeft, ArrowRight, Calculator, CheckCircle2, Circle, RotateCcw, Square, SquareCheck, XCircle } from 'lucide-react';
 import { CASES, type CaseCalc, type ClinicalCase } from '@/data/cases';
@@ -67,6 +68,7 @@ function Player({ c }: { c: ClinicalCase }) {
   const [scores, setScores] = useState<boolean[]>([]);
   const step = c.steps[i];
   const finished = i >= c.steps.length;
+  const order = useMemo(() => (step ? permutation(step.options.length, `${c.id}:${i}`) : []), [c.id, i, step]);
 
   const isRight = (picked: number[]) => {
     const correct = step.options.map((o, j) => (o.correct ? j : -1)).filter((j) => j >= 0);
@@ -154,7 +156,8 @@ function Player({ c }: { c: ClinicalCase }) {
         <p className="mt-5 font-semibold">{step.question}</p>
         {step.multi && <p className="text-xs text-muted">Select all that apply, then submit.</p>}
         <ul className="mt-3 space-y-2">
-          {step.options.map((o, j) => {
+          {order.map((j) => {
+            const o = step.options[j];
             const picked = sel.includes(j);
             const Icon = submitted ? (o.correct ? CheckCircle2 : picked ? XCircle : step.multi ? Square : Circle) : step.multi ? (picked ? SquareCheck : Square) : Circle;
             return (

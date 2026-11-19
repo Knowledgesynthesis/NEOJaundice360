@@ -20,7 +20,7 @@ export interface Marker {
 
 function useWidth<T extends HTMLElement>() {
   const ref = useRef<T>(null);
-  const [w, setW] = useState(640);
+  const [w, setW] = useState(320);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -106,8 +106,8 @@ export function BiliChart({
   const summary = `${title}. ${series.map((s) => s.label).join(', ')}${markers.length ? `; ${markers.length} plotted measurement(s)` : ''}.`;
 
   return (
-    <figure className="w-full">
-      <div ref={wrapRef} className="relative w-full select-none">
+    <figure className="w-full min-w-0">
+      <div ref={wrapRef} className="relative w-full min-w-0 select-none overflow-hidden">
         <svg
           width={W}
           height={H}

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router';
-import { ArrowDown, ArrowRight, RotateCcw } from 'lucide-react';
+import { ArrowRight, RotateCcw } from 'lucide-react';
 import { Callout, Card, Check, KeyPoints, PageHeader, SectionTitle } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { Cite } from '@/components/Cite';
@@ -147,27 +147,22 @@ export default function PhysiologyPage() {
 
       <Card>
         <SectionTitle kicker="Interactive">The pathway — tap a step</SectionTitle>
-        <ol className="flex flex-col items-stretch gap-1.5 md:flex-row md:flex-wrap md:items-center">
+        <ol className="grid grid-cols-2 gap-2 md:flex md:flex-row md:flex-wrap md:items-center md:gap-1.5">
           {STEPS.map((s, i) => (
-            <li key={s.id} className="flex flex-col items-center md:flex-row">
+            <li key={s.id} className="flex md:flex-row md:items-center">
               <button
                 type="button"
                 onClick={() => setActive(s.id)}
                 aria-pressed={active === s.id}
                 className={cn(
-                  'w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors md:w-auto',
+                  'h-full w-full rounded-xl border px-3 py-2 text-left text-sm transition-colors md:h-auto md:w-auto',
                   active === s.id ? 'border-brand bg-brand/15 font-semibold' : 'border-border bg-surface-2/60 hover:border-brand',
                 )}
               >
                 <span className="block text-[0.65rem] uppercase tracking-wide text-muted">{s.place}</span>
                 {i + 1}. {s.title}
               </button>
-              {i < STEPS.length - 1 && (
-                <>
-                  <ArrowDown className="my-0.5 h-4 w-4 text-muted md:hidden" aria-hidden />
-                  <ArrowRight className="mx-1 hidden h-4 w-4 text-muted md:block" aria-hidden />
-                </>
-              )}
+              {i < STEPS.length - 1 && <ArrowRight className="mx-1 hidden h-4 w-4 shrink-0 text-muted md:block" aria-hidden />}
             </li>
           ))}
         </ol>
@@ -176,7 +171,7 @@ export default function PhysiologyPage() {
           bilirubin in skin to isomers excreted without step 6.
         </p>
 
-        <div className="mt-5 grid gap-4 rounded-2xl border border-border bg-surface-2/50 p-4 md:grid-cols-3" aria-live="polite">
+        <div id="step-detail" className="mt-5 grid scroll-mt-20 gap-4 rounded-2xl border border-border bg-surface-2/50 p-4 md:grid-cols-3" aria-live="polite">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-muted">What happens</p>
             <p className="mt-1 text-sm">{step.what}</p>

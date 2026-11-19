@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { Activity, AlertOctagon, Plus, Share2, Trash2 } from 'lucide-react';
 import { assess, type Zone } from '@/lib/bili/assess';
@@ -86,6 +86,21 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
   const [albumin, setAlbumin] = useState<number | ''>(init.albumin);
   const [abe, setAbe] = useState(init.abe);
   const [copied, setCopied] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const [inCalc, setInCalc] = useState(false);
+  const [resultsVisible, setResultsVisible] = useState(false);
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return;
+    const a = new IntersectionObserver(([e]) => setInCalc(e.isIntersecting));
+    const b = new IntersectionObserver(([e]) => setResultsVisible(e.isIntersecting), { rootMargin: '0px 0px -40% 0px' });
+    if (rootRef.current) a.observe(rootRef.current);
+    if (resultsRef.current) b.observe(resultsRef.current);
+    return () => {
+      a.disconnect();
+      b.disconnect();
+    };
+  }, []);
 
   const gaNum = typeof ga === 'number' ? Math.min(42, Math.max(23, Math.floor(ga))) : 39;
   const measurements = useMemo(
@@ -154,7 +169,7 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
   const nice = gaNum >= 38 && result ? nice38Thresholds(result.latest.ageHours) : null;
 
   return (
-    <div className="space-y-6" id="calculator">
+    <div ref={rootRef} className="space-y-6" id="calculator">
       {!compactIntro && (
         <Callout kind="info" title="What this calculator embeds">
           AAP 2022 phototherapy curves for 35 to ≥40 weeks (with and without neurotoxicity risk factors) from 12 h to 14 days, plus escalation and
@@ -248,7 +263,7 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
         </Card>
 
         {/* ------------------------------ results ------------------------------ */}
-        <div className="min-w-0 space-y-6">
+        <div ref={resultsRef} id="calc-results" className="min-w-0 scroll-mt-20 space-y-6">
           {!result ? (
             <Card>
               <p className="text-sm text-muted">Enter an age and a bilirubin value.</p>
@@ -406,6 +421,26 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
           )}
         </div>
       </div>
+
+      {result && inCalc && !resultsVisible && (
+        <a
+          href="#calc-results"
+          onClick={(e) => {
+            e.preventDefault();
+            document.getElementById('calc-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }}
+          className={cn(
+            'no-print fixed inset-x-3 bottom-3 z-30 flex items-center justify-between gap-3 rounded-2xl border p-3 text-sm shadow-xl backdrop-blur lg:hidden',
+            zoneMeta[result.zone].cls,
+            'bg-surface/95',
+          )}
+        >
+          <span className="font-bold">{abe ? 'ABE signs — exchange' : zoneMeta[result.zone].label}</span>
+          <span className="tabular shrink-0 text-xs text-fg">
+            Photo {formatBili(t?.phototherapy.value, unit)} ↓
+          </span>
+        </a>
+      )}
 
       <details className="rounded-2xl border border-border bg-surface p-4 text-sm">
         <summary className="cursor-pointer font-semibold">Data provenance and limits</summary>

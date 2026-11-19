@@ -4,7 +4,7 @@ import { AlertTriangle, CheckCircle2, Info, Lightbulb, OctagonAlert } from 'luci
 
 export function Card({ className, children, id }: { className?: string; children: ReactNode; id?: string }) {
   return (
-    <section id={id} className={cn('rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6', className)}>
+    <section id={id} className={cn('min-w-0 rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-6', className)}>
       {children}
     </section>
   );
@@ -226,7 +226,7 @@ export function KeyPoints({ points, title = 'Key points' }: { points: ReactNode[
 /** Simple responsive table wrapper. */
 export function Table({ head, rows, caption }: { head: ReactNode[]; rows: ReactNode[][]; caption?: string }) {
   return (
-    <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+    <div className="-mx-4 max-w-[calc(100%+2rem)] overflow-x-auto px-4 sm:mx-0 sm:max-w-full sm:px-0">
       <table className="w-full min-w-[32rem] border-collapse text-left text-sm">
         {caption && <caption className="mb-2 text-left text-xs text-muted">{caption}</caption>}
         <thead>
