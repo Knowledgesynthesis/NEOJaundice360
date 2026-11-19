@@ -761,7 +761,7 @@ export const QUESTIONS: Question[] = [
     options: ['Liver ultrasound at 6 weeks', 'Direct/conjugated bilirubin measured in the first days of life', 'Serum ALT at birth', 'Clinical examination at 8 weeks'],
     answer: 1,
     explanation: 'Newborn DB/CB screening performed best; stool color cards also perform well and are low-cost.',
-    refs: ['harpavat2020', 'hsiao2008'],
+    refs: ['basr2024', 'harpavat2020', 'hsiao2008'],
   },
 ];
 

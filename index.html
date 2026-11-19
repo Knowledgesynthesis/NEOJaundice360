@@ -1,15 +1,32 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Comprehensive educational app for learning about newborn jaundice" />
-    <meta name="theme-color" content="#1e293b" />
-    <title>NeoJaundice360 - Newborn Jaundice Education</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>NeoJaundice360 — Newborn Jaundice Mastery</title>
+    <meta
+      name="description"
+      content="Interactive, evidence-based course on newborn jaundice: physiology, causes, AAP 2022 thresholds calculator, treatment, neurotoxicity, cholestasis and biliary atresia, cases and quizzes."
+    />
+    <meta name="theme-color" content="#0b0f17" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <script>
+      // Apply the saved theme before first paint (no flash). Storage may be blocked.
+      (function () {
+        var t = 'system';
+        try {
+          var s = JSON.parse(localStorage.getItem('nj360') || '{}');
+          t = (s.state && s.state.theme) || 'system';
+        } catch (e) {}
+        var dark = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) document.documentElement.classList.add('dark');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
+    <noscript>NeoJaundice360 needs JavaScript.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

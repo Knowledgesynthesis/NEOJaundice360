@@ -225,6 +225,15 @@ export const REFERENCES: Reference[] = [
     use: 'Newborn DB/CB screening (first days of life) detects biliary atresia with very high sensitivity.',
   },
   {
+    id: 'basr2024',
+    short: 'BA screening meta-analysis 2024',
+    kind: 'review',
+    citation:
+      'Population-based screening strategies for biliary atresia in the newborn: a systematic review and meta-analysis. PLoS One. 2024.',
+    url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC11357077/',
+    use: 'Newborn DB/CB measurement had the best accuracy; stool color cards also perform well.',
+  },
+  {
     id: 'hsiao2008',
     short: 'Hsiao 2008 (Taiwan)',
     kind: 'cohort',

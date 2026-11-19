@@ -1,0 +1,111 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-fg: var(--brand-fg);
+  --color-photo: var(--photo);
+  --color-esc: var(--esc);
+  --color-exch: var(--exch);
+  --color-ok: var(--ok);
+  --color-info: var(--info);
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+:root {
+  color-scheme: light;
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #f0eee8;
+  --border: #e2ded4;
+  --fg: #17181c;
+  --muted: #5d6069;
+  --brand: #d98b00;
+  --brand-strong: #a86a00;
+  --brand-fg: #1a1205;
+  --photo: #2563eb;
+  --esc: #c2410c;
+  --exch: #b91c1c;
+  --ok: #047857;
+  --info: #0369a1;
+}
+
+.dark {
+  color-scheme: dark;
+  --bg: #0b0f17;
+  --surface: #121826;
+  --surface-2: #1a2232;
+  --border: #263044;
+  --fg: #e8eaf0;
+  --muted: #9aa3b5;
+  --brand: #f5b62e;
+  --brand-strong: #ffd166;
+  --brand-fg: #1a1205;
+  --photo: #60a5fa;
+  --esc: #fb923c;
+  --exch: #f87171;
+  --ok: #34d399;
+  --info: #38bdf8;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: 5rem;
+  }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  *,
+  ::before,
+  ::after {
+    border-color: var(--border);
+  }
+  :focus-visible {
+    outline: 2px solid var(--brand);
+    outline-offset: 2px;
+  }
+  input[type='number']::-webkit-inner-spin-button {
+    opacity: 1;
+  }
+}
+
+@layer components {
+  .prose-tight p + p {
+    margin-top: 0.6rem;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    color: #000;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

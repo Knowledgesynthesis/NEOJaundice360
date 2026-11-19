@@ -564,12 +564,12 @@ export const CASES: ClinicalCase[] = [
       },
       {
         title: 'Decision',
-        narrative: 'His TSB is below the no-risk-factor exchange threshold for his age (27.0 mg/dL).',
+        narrative: 'His TSB is above the phototherapy threshold but below the no-risk-factor escalation (25.0) and exchange (27.0) thresholds for his age.',
         calc: {
           gaWeeks: 38,
           measurements: [{ ageHours: 118, value: 24.1, method: 'TSB' }],
           abeSigns: true,
-          expectZone: 'below',
+          expectZone: 'phototherapy',
         },
         question: 'What now?',
         options: [
