@@ -191,9 +191,9 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
         </Callout>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
         {/* ------------------------------ inputs ------------------------------ */}
-        <Card className="space-y-5">
+        <Card className="min-w-0 space-y-5">
           <div>
             <h3 className="mb-2 font-bold">Infant</h3>
             <div className="grid grid-cols-2 gap-3">
@@ -308,7 +308,7 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
             )
           ) : (
             <>
-              <div role="status" aria-live="polite" className={cn('flex items-center gap-3 rounded-2xl border p-4', zoneMeta[displayedZone].cls)}>
+              <div role={abe ? 'alert' : 'status'} aria-live={abe ? 'assertive' : 'polite'} className={cn('flex min-w-0 items-center gap-3 rounded-2xl border p-4', zoneMeta[displayedZone].cls)}>
                 {zoneMeta[displayedZone].icon ? <AlertOctagon className="h-6 w-6 shrink-0" /> : <Activity className="h-6 w-6 shrink-0" />}
                 <div>
                   <p className="text-lg font-extrabold">{abe ? 'ABE signs — urgent exchange transfusion' : zoneMeta[displayedZone].label}</p>

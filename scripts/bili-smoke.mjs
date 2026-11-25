@@ -52,9 +52,33 @@ try {
   await page.getByText(/Screening only\. Use TSB for treatment decisions/).waitFor()
   await page.getByRole('link', { name: 'Open in calculator' }).click()
   await get('TcB screening only — treatment decisions require TSB').waitFor()
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
+  const width = await page.evaluate(() => {
+    const overflowing = [...document.querySelectorAll('body *')]
+      .filter((el) => el.getBoundingClientRect().right > innerWidth + 1 && !el.closest('svg'))
+      .slice(0, 20)
+      .map((el) => [el.tagName, el.getAttribute('class'), Math.round(el.getBoundingClientRect().right)])
+    return { viewport: innerWidth, document: document.documentElement.scrollWidth, overflowing }
+  })
+  assert.ok(width.document <= width.viewport, JSON.stringify(width))
   assert.deepEqual(errors, [])
   console.log(`Bilirubin browser smoke passed: ${origin}/calculator and linked cases`)
+
+  const offline = await browser.newContext({ viewport: { width: 390, height: 844 } })
+  try {
+    const installed = await offline.newPage()
+    const sample = new URL('/calculator?ga=35&m=48:16:TSB', origin)
+    await installed.goto(sample.href)
+    await installed.locator('#calc-results').getByText('20.7 mg/dL', { exact: true }).waitFor({ timeout: 8000 })
+    await installed.waitForFunction(async () => Boolean((await navigator.serviceWorker.getRegistration())?.active), undefined, { timeout: 8000 })
+    if (!(await installed.evaluate(() => Boolean(navigator.serviceWorker.controller)))) await installed.reload()
+    await installed.waitForFunction(() => Boolean(navigator.serviceWorker.controller), undefined, { timeout: 8000 })
+    await offline.setOffline(true)
+    await installed.reload({ waitUntil: 'domcontentloaded' })
+    await installed.locator('#calc-results').getByText('20.7 mg/dL', { exact: true }).waitFor({ timeout: 8000 })
+    console.log(`Bilirubin offline reload passed in a fresh browser context: ${origin}/calculator`)
+  } finally {
+    await offline.close()
+  }
 } finally {
   await browser.close()
 }

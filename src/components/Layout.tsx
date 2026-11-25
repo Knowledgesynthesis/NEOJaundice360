@@ -188,22 +188,22 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="mx-auto flex h-14 max-w-[90rem] items-center gap-2 px-3 sm:px-4">
           <button
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-xl hover:bg-surface-2 lg:hidden"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl hover:bg-surface-2 lg:hidden"
             onClick={() => setOpen(true)}
             aria-label="Open menu"
             aria-expanded={open}
           >
             <Menu className="h-5 w-5" />
           </button>
-          <Link to="/" className="flex items-center gap-2 font-extrabold tracking-tight">
-            <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-brand-fg" aria-hidden>
+          <Link to="/" className="flex min-w-0 items-center gap-2 text-sm font-extrabold tracking-tight sm:text-base">
+            <span className="hidden h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand text-brand-fg sm:grid" aria-hidden>
               <Droplets className="h-4.5 w-4.5" />
             </span>
-            <span>
+            <span className="truncate">
               NeoJaundice<span className="text-brand-strong">360</span>
             </span>
           </Link>
-          <div className="ml-auto flex items-center gap-1 sm:gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
             <Link
               to="/calculator"
               className="hidden h-10 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-muted hover:bg-surface-2 hover:text-fg md:inline-flex"
