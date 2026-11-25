@@ -20,9 +20,7 @@ export default function ReferencesPage() {
         lead="Every clinical statement in this app links here. Guidelines take precedence; studies explain the why."
       />
       <Callout kind="info" title="How the threshold data were built">
-        AAP 2022 phototherapy values at 24/48/72/96 h were taken from the guideline’s supplemental tables as reproduced by independent implementations, cross-checked against each
-        other, and are locked by automated tests. Interpolated or approximate values are labelled wherever they appear. Curves not verifiable offline (35–37-week exchange) are not
-        embedded — use BiliTool or PediTools for those.
+        The calculator and its charts use the published hourly <a className="text-brand-strong underline" href="https://aap2.silverchair-cdn.com/aap2/content_public/journal/pediatrics/150/3/10.1542_peds.2022-058859/5/peds_2022058859supplementarydata.pdf" target="_blank" rel="noreferrer">AAP 2022 Supplemental Tables 1–4</a> for ≥35 weeks, hours 1–336. The hour-0 cell is blank in the source. There are no estimated gestational-age rows or extrapolated thresholds. TcB does not trigger treatment, and a separate preterm reference applies below 35 weeks.
       </Callout>
       {ORDER.map((k) => {
         const refs = REFERENCES.filter((r) => r.kind === k);

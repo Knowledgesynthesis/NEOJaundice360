@@ -4,7 +4,7 @@ import { Callout, Card, Check, KeyPoints, NumberField, PageHeader, SectionTitle,
 import { cn } from '@/lib/cn';
 import { Cite } from '@/components/Cite';
 import { ModuleCheck } from '@/components/Quiz';
-import { HOME_PHOTOTHERAPY_CRITERIA, reboundPlan } from '@/lib/bili/guidelines';
+import { HOME_PHOTOTHERAPY_CRITERIA, reboundPlan, type ReboundContext } from '@/lib/bili/guidelines';
 import { formatBili, toMgdlFrom, unitLabel } from '@/lib/bili/units';
 import { useApp } from '@/stores/appStore';
 
@@ -14,7 +14,7 @@ function StopPlanner() {
   const [cur, setCur] = useState<number | ''>(unit === 'mgdl' ? 13.9 : 238);
   const [early, setEarly] = useState(false);
   const [hemo, setHemo] = useState(false);
-  const [readmit, setReadmit] = useState(false);
+  const [context, setContext] = useState<ReboundContext>('birth-admission');
   const [preterm, setPreterm] = useState(false);
   const thrMg = thr === '' ? null : toMgdlFrom(thr, unit);
   const curMg = cur === '' ? null : toMgdlFrom(cur, unit);
@@ -33,7 +33,14 @@ function StopPlanner() {
           </div>
           <Check label="Phototherapy started before 48 h of age" checked={early} onChange={setEarly} />
           <Check label="Hemolytic disease (positive DAT or other hemolysis)" checked={hemo} onChange={setHemo} />
-          <Check label="Readmitted from home for phototherapy" checked={readmit} onChange={setReadmit} />
+          <label className="block space-y-1 text-sm font-semibold">
+            <span>Phototherapy setting</span>
+            <select className="w-full rounded-lg border border-border bg-surface p-2" value={context} onChange={(e) => setContext(e.target.value as ReboundContext)}>
+              <option value="birth-admission">Birth hospitalization</option>
+              <option value="readmitted-after-birth-phototherapy">Readmitted after phototherapy at birth hospitalization</option>
+              <option value="first-treatment-on-readmission-or-home">First phototherapy on readmission, or home phototherapy</option>
+            </select>
+          </label>
           <Check label="Born 35–37 weeks (for CPS 2025 rule)" checked={preterm} onChange={setPreterm} />
         </div>
         <div aria-live="polite" className="space-y-3">
@@ -46,7 +53,7 @@ function StopPlanner() {
             <Cite ids={['cps2025']} />
           </Callout>
           <Callout kind="pearl" title="Rebound check">
-            {reboundPlan({ startedBefore48h: early, hemolysis: hemo, readmitted: readmit })} Rebound = reaching the phototherapy threshold within 72–96 h of stopping.
+            {reboundPlan({ startedBefore48h: early, hemolysis: hemo, context })} Rebound = reaching the phototherapy threshold within 72–96 h of stopping.
             <Cite ids={['aap2022']} />
           </Callout>
         </div>
@@ -114,8 +121,7 @@ export default function TreatmentPage() {
               <strong>Expected response:</strong> intensive phototherapy typically lowers TSB 30–40% in 24 h (less with ongoing hemolysis).
             </li>
             <li>
-              <strong>Feeding:</strong> continue breastfeeding; brief interruptions for feeds are fine unless near escalation. Supplement only for intake problems; IV fluids only for
-              dehydration.
+              <strong>Feeding:</strong> continue breastfeeding; brief interruptions for feeds are fine unless near escalation. Support intake as needed. Outside escalation, reserve IV fluids for dehydration that cannot be corrected enterally.
             </li>
             <li>
               <strong>Mechanism:</strong> photoisomerization; lumirubin is cleared in bile and urine without conjugation.
@@ -137,12 +143,11 @@ export default function TreatmentPage() {
         <SectionTitle kicker="Emergency">Escalation of care — TSB ≥ exchange threshold − 2 mg/dL</SectionTitle>
         <ol className="ml-5 list-decimal space-y-1.5 text-sm sm:text-base">
           <li>Treat as a medical emergency; admit or transfer promptly to a unit able to perform exchange transfusion.</li>
-          <li>Intensive phototherapy now, during transport and throughout.</li>
+          <li>Start IV hydration and emergent intensive phototherapy. Consult neonatology for urgent transfer to an exchange-capable NICU (KAS 19); continue treatment through transfer.</li>
           <li>TSB at least every 2 h until below the escalation threshold.</li>
           <li>Send CBC, type &amp; crossmatch, albumin (B/A ratio), chemistry panel, DB/CB; G6PD activity if not known.</li>
-          <li>Isoimmune hemolysis: IVIG 0.5–1 g/kg over 2 h; may repeat in 12 h.</li>
-          <li>Enteral feeding; IV fluids only if dehydrated.</li>
-          <li>Exchange if TSB reaches the exchange threshold, or immediately with intermediate/advanced ABE signs.</li>
+          <li>Positive-DAT isoimmune hemolysis at escalation: IVIG 0.5–1 g/kg over 2 h is an option; may repeat in 12 h. Benefit is uncertain and exchange preparation must not be delayed.</li>
+          <li>Prepare urgent exchange at/above the exchange threshold, or immediately for intermediate/advanced ABE signs. If TSB falls below exchange during preparation and there are no such signs, exchange may be deferred while intensive phototherapy and TSB checks at least every 2 h continue until below escalation.</li>
         </ol>
         <p className="mt-2 text-xs text-muted">
           <Cite ids={['aap2022', 'cochraneIvig2018']} />
@@ -154,7 +159,7 @@ export default function TreatmentPage() {
         <Table
           head={['', 'Details']}
           rows={[
-            ['Indications', 'TSB ≥ exchange threshold despite intensive phototherapy; any intermediate/advanced ABE signs regardless of TSB; B/A ratio supports the decision (≥8.0 / 7.2 / 6.8)'],
+            ['Indications', 'TSB ≥ exchange threshold; any intermediate/advanced ABE signs regardless of TSB; B/A ratio supports the decision (≥8.0 / 7.2 / 6.8)'],
             ['Before starting', 'Send G6PD, newborn screen, metabolic and red-cell studies — donor blood invalidates them'],
             ['Blood', 'Fresh, irradiated, CMV-safe reconstituted whole blood, compatible with mother and infant (group O for ABO disease)'],
             ['Volume', 'Double volume ≈160–170 mL/kg; removes ~85% of red cells, halves TSB; expect partial rebound'],
@@ -171,7 +176,7 @@ export default function TreatmentPage() {
         <SectionTitle kicker="Evidence check">IVIG: what it can and can’t do</SectionTitle>
         <p className="text-sm">
           IVIG blocks Fc receptors on macrophages, slowing destruction of antibody-coated cells. Older trials suggested fewer exchanges, but trials at low risk of bias found no
-          reduction; the evidence is low certainty. AAP 2022 still recommends it at the escalation threshold for isoimmune disease. It is an adjunct — never a reason to delay an
+          reduction; the evidence is low certainty. AAP 2022 lists it as an option at the escalation threshold for positive-DAT isoimmune hemolysis. It is an adjunct — never a reason to delay an
           indicated exchange. Not for non-immune hemolysis (G6PD, spherocytosis).
           <Cite ids={['aap2022', 'cochraneIvig2018']} />
         </p>

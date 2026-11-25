@@ -13,6 +13,8 @@ export interface CaseCalc {
   rf?: Partial<NeurotoxicityRiskFactors>;
   albumin?: number;
   abeSigns?: boolean;
+  context?: 'birth-hospitalization' | 'outpatient';
+  risingDespitePhototherapy?: boolean;
   /** Asserted by unit tests so the narrative never contradicts the engine. */
   expectZone: Zone;
 }
@@ -152,7 +154,7 @@ export const CASES: ClinicalCase[] = [
       {
         title: 'Discharge planning',
         narrative: '38 0/7-week girl, exclusively breastfed, no neurotoxicity risk factors. TcB 7.5 mg/dL at 36 h, discharge today.',
-        calc: { gaWeeks: 38, measurements: [{ ageHours: 36, value: 7.5, method: 'TcB' }], expectZone: 'below' },
+        calc: { gaWeeks: 38, measurements: [{ ageHours: 36, value: 7.5, method: 'TcB' }], expectZone: 'screening' },
         question: 'What follow-up does the AAP 2022 algorithm give?',
         options: [
           { text: 'Follow-up within 2 days; TcB/TSB per clinical judgment', correct: true, feedback: 'TcB is 6.7 mg/dL below threshold (5.5–6.9 band, <72 h).' },
@@ -179,13 +181,13 @@ export const CASES: ClinicalCase[] = [
       {
         title: 'TSB result',
         narrative: 'TSB 17.6 mg/dL at 90 h; sodium 144 mmol/L.',
-        calc: { gaWeeks: 38, measurements: [{ ageHours: 90, value: 17.6, method: 'TSB' }], expectZone: 'below' },
+        calc: { gaWeeks: 38, measurements: [{ ageHours: 90, value: 17.6, method: 'TSB' }], context: 'outpatient', expectZone: 'below' },
         question: 'Best plan?',
         options: [
           {
             text: 'Feeding plan: lactation support, feed 8–12×/day, supplement with expressed/donor milk or formula; repeat TSB in 4–24 h',
             correct: true,
-            feedback: 'Below threshold by ~2.9 mg/dL; the problem is intake.',
+            feedback: 'Below the 20.3 mg/dL threshold by 2.7 mg/dL; the problem is intake.',
           },
           { text: 'Admit for phototherapy', correct: false, feedback: 'Below the 2022 threshold.' },
           { text: 'Stop breastfeeding for 48 h', correct: false, feedback: 'Not recommended.' },
@@ -197,10 +199,10 @@ export const CASES: ClinicalCase[] = [
       {
         title: 'Next day',
         narrative: 'At 112 h: weight +45 g, 6 wet diapers, yellow stools. TSB 16.1 mg/dL.',
-        calc: { gaWeeks: 38, measurements: [{ ageHours: 112, value: 16.1, method: 'TSB' }], expectZone: 'below' },
+        calc: { gaWeeks: 38, measurements: [{ ageHours: 112, value: 16.1, method: 'TSB' }], context: 'outpatient', expectZone: 'below' },
         question: 'Interpretation?',
         options: [
-          { text: 'Improving: intake restored and TSB falling; recheck in 1–2 days', correct: true, feedback: '~4.6 mg/dL below the plateau threshold.' },
+          { text: 'Improving: intake restored and TSB falling; recheck in 1–2 days', correct: true, feedback: '4.7 mg/dL below the published threshold at 112 h.' },
           { text: 'Refractory — needs exchange', correct: false, feedback: 'Far from exchange levels.' },
           { text: 'Breast milk jaundice', correct: false, feedback: 'That is prolonged jaundice in a thriving infant.' },
           { text: 'Start phototherapy', correct: false, feedback: 'Below threshold.' },
@@ -228,7 +230,7 @@ export const CASES: ClinicalCase[] = [
         calc: { gaWeeks: 37, measurements: [{ ageHours: 30, value: 9.0, method: 'TSB' }], expectZone: 'below' },
         question: 'Follow-up from the algorithm?',
         options: [
-          { text: 'TSB or TcB in 1–2 days', correct: true, feedback: '~3.6 mg/dL below threshold → 3.5–5.4 band.' },
+          { text: 'TSB or TcB in 1–2 days', correct: true, feedback: '3.7 mg/dL below threshold → 3.5–5.4 band.' },
           { text: 'Follow-up within 3 days', correct: false, feedback: 'That is the ≥7 band.' },
           { text: 'No follow-up', correct: false, feedback: 'Never.' },
           { text: 'Start phototherapy', correct: false, feedback: 'Below threshold.' },
@@ -245,10 +247,10 @@ export const CASES: ClinicalCase[] = [
           {
             text: 'Treat suspected hemolysis (likely G6PD deficiency) as a neurotoxicity risk factor → 37-week risk-factor curve; he is above it → intensive phototherapy',
             correct: true,
-            feedback: 'On the no-RF curve (20.0) he would wrongly look “below threshold”.',
+            feedback: 'On the no-RF curve he would wrongly look “below threshold”.',
           },
           { text: '37-week no-risk-factor curve; observe', correct: false, feedback: 'Ignores probable hemolysis.' },
-          { text: 'Exchange transfusion now', correct: false, feedback: 'Phototherapy first; escalate if he reaches the escalation curve (read from the official 37-wk figure).' },
+          { text: 'Exchange transfusion now', correct: false, feedback: 'Phototherapy first; escalate if he reaches the escalation curve (21.1 mg/dL at 100 h on the risk-factor curve).' },
           { text: 'Wait for the G6PD result', correct: false, feedback: 'Treat now.' },
         ],
         teaching: 'Naphthalene is a classic oxidant trigger. A sudden rise or a rise after decline should prompt G6PD testing.',
@@ -409,7 +411,7 @@ export const CASES: ClinicalCase[] = [
           { text: 'Immediate exchange', correct: false, feedback: 'Not yet indicated by TSB.' },
           { text: 'Early discharge with follow-up', correct: false, feedback: 'Unsafe.' },
         ],
-        teaching: 'Thresholds are not computed before 12 h here, but severe isoimmune disease is treated pre-emptively.',
+        teaching: 'There is no published hour-0 row; severe isoimmune disease needs immediate neonatology assessment and treatment without waiting for a later threshold.',
         refs: ['aap2022'],
       },
       {
@@ -423,20 +425,21 @@ export const CASES: ClinicalCase[] = [
           ],
           rf: { isoimmune: true },
           albumin: 2.9,
+          risingDespitePhototherapy: true,
           expectZone: 'escalation',
         },
         question: 'He has crossed the escalation-of-care threshold. What does that bundle include?',
         options: [
           {
-            text: 'IVIG 0.5–1 g/kg over 2 h; TSB every 2 h; CBC, type & crossmatch, chemistry; prepare exchange; enteral feeds',
+            text: 'IV hydration, emergent intensive phototherapy, STAT labs, TSB at least every 2 h, exchange-capable NICU; consider IVIG for positive DAT',
             correct: true,
             feedback: 'Escalation is a medical emergency.',
           },
           { text: 'Add a second phototherapy unit and recheck tomorrow', correct: false, feedback: 'Too passive.' },
-          { text: 'Stop feeds and run IV fluids', correct: false, feedback: 'IV fluids only for dehydration.' },
+          { text: 'Stop feeds and run IV fluids', correct: false, feedback: 'IV hydration is part of escalation; this option omits intensive phototherapy, STAT testing, and exchange-capable NICU care.' },
           { text: 'Exchange immediately', correct: false, feedback: 'Not yet at the exchange threshold.' },
         ],
-        teaching: 'IVIG evidence is low certainty (Cochrane); it is an adjunct, never a reason to delay an indicated exchange.',
+        teaching: 'At 30 h the Table 4 escalation threshold is 16.3 mg/dL and exchange is 18.3. IVIG is optional for positive-DAT isoimmune hemolysis and must not delay exchange.',
         refs: ['aap2022', 'cochraneIvig2018'],
       },
       {
@@ -450,6 +453,7 @@ export const CASES: ClinicalCase[] = [
           ],
           rf: { isoimmune: true },
           albumin: 2.9,
+          risingDespitePhototherapy: true,
           expectZone: 'exchange',
         },
         question: 'Next step?',
@@ -492,10 +496,10 @@ export const CASES: ClinicalCase[] = [
       {
         title: 'Pre-discharge',
         narrative: '36 2/7-week girl, well, formula + breast milk. TcB 10.0 mg/dL at 30 h.',
-        calc: { gaWeeks: 36, measurements: [{ ageHours: 30, value: 10.0, method: 'TcB' }], expectZone: 'below' },
+        calc: { gaWeeks: 36, measurements: [{ ageHours: 30, value: 10.0, method: 'TcB' }], expectZone: 'screening' },
         question: 'Next step?',
         options: [
-          { text: 'Measure TSB — TcB is within 3 mg/dL of the threshold', correct: true, feedback: 'Threshold ≈12.1 mg/dL.' },
+          { text: 'Measure TSB — TcB is within 3 mg/dL of the threshold', correct: true, feedback: 'The 30-h threshold is 12.1 mg/dL.' },
           { text: 'Discharge, follow-up in 3 days', correct: false, feedback: 'TcB too close to threshold.' },
           { text: 'Start phototherapy', correct: false, feedback: 'Below threshold.' },
           { text: 'Use the risk-factor curve because she is 36 weeks', correct: false, feedback: 'GA is built into the curve.' },

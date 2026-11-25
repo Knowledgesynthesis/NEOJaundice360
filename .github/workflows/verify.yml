@@ -1,0 +1,45 @@
+name: Verify bilirubin calculator
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint && npm test && npm run build
+      - name: Install browser smoke runner
+        run: |
+          npm install --prefix "$RUNNER_TEMP/bili-smoke" --no-save --package-lock=false playwright@1.58.2
+          echo "PLAYWRIGHT_MODULE=$RUNNER_TEMP/bili-smoke/node_modules/playwright/index.mjs" >> "$GITHUB_ENV"
+          if command -v google-chrome >/dev/null; then
+            echo "CHROMIUM_PATH=$(command -v google-chrome)" >> "$GITHUB_ENV"
+          else
+            "$RUNNER_TEMP/bili-smoke/node_modules/.bin/playwright" install --with-deps chromium
+          fi
+      - name: Browser tests on built preview
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 --strictPort &
+          for i in {1..15}; do curl -fsS http://127.0.0.1:4173/ -o /dev/null && break; sleep 1; done
+          node scripts/bili-smoke.mjs
+      - name: Browser tests on public Vercel after main deploy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          BILI_BASE_URL: https://neo-jaundice360.vercel.app
+          BILI_LIVE_SMOKE: 'true'
+        run: |
+          for i in {1..20}; do
+            if node scripts/bili-smoke.mjs; then exit 0; fi
+            echo "Production not verified yet ($i/20)"
+            sleep 10
+          done
+          exit 1

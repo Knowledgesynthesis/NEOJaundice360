@@ -8,7 +8,7 @@ export interface Series {
   dashed?: boolean;
   /** Fill the area above this curve (zone shading). */
   fillAbove?: boolean;
-  points: { h: number; v: number; extrapolated?: boolean }[];
+  points: { h: number; v: number }[];
 }
 
 export interface Marker {
@@ -157,19 +157,10 @@ export function BiliChart({
               />
             ))}
 
-          {/* curves: solid part and extrapolated part */}
-          {series.map((s) => {
-            const solid = s.points.filter((p) => !p.extrapolated);
-            const ex = s.points.filter((p, i, arr) => p.extrapolated || (i > 0 && arr[i - 1].extrapolated));
-            return (
-              <g key={s.id}>
-                {ex.length > 1 && <path d={pathFor(ex)} fill="none" stroke={s.color} strokeWidth={2} strokeDasharray="3 4" opacity={0.6} />}
-                {solid.length > 1 && (
-                  <path d={pathFor(solid)} fill="none" stroke={s.color} strokeWidth={2.5} strokeDasharray={s.dashed ? '7 5' : undefined} strokeLinejoin="round" />
-                )}
-              </g>
-            );
-          })}
+          {/* curves */}
+          {series.filter((s) => s.points.length > 1).map((s) => (
+            <path key={s.id} d={pathFor(s.points)} fill="none" stroke={s.color} strokeWidth={2.5} strokeDasharray={s.dashed ? '7 5' : undefined} strokeLinejoin="round" />
+          ))}
 
           {/* measurements */}
           {markers.map((mk, i) => {
@@ -235,7 +226,6 @@ export function BiliChart({
             <span className="ml-2 inline-block h-2.5 w-2.5 rotate-45 border-2 border-fg bg-surface" aria-hidden /> TcB
           </span>
         )}
-        {series.some((s) => s.points.some((p) => p.extrapolated)) && <span>Dotted segment = extrapolated (&lt;24 h)</span>}
       </figcaption>
       <details className="mt-2 text-xs">
         <summary className="cursor-pointer text-muted hover:text-fg">Show values as a table</summary>

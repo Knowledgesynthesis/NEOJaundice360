@@ -13,7 +13,7 @@ import {
   type RateOfRise,
 } from './guidelines';
 
-export type Zone = 'below' | 'phototherapy' | 'escalation' | 'exchange' | 'unknown';
+export type Zone = 'screening' | 'below' | 'phototherapy' | 'escalation' | 'exchange' | 'unknown';
 
 export interface AssessInput {
   gaWeeks: number; // completed weeks
@@ -21,6 +21,8 @@ export interface AssessInput {
   measurements: Measurement[]; // most recent is used for decisions
   riskFactors: NeurotoxicityRiskFactors;
   albumin?: number | null; // g/dL
+  receivedPhototherapy?: boolean;
+  risingDespitePhototherapy?: boolean; // clinician-confirmed serial TSB rise during ongoing phototherapy (KAS 17)
   abeSigns?: boolean; // signs of intermediate/advanced acute bilirubin encephalopathy
   context?: 'birth-hospitalization' | 'outpatient';
 }
@@ -47,8 +49,14 @@ export interface Assessment {
   actions: Action[];
 }
 
+export const ABE_ACTION: Action = {
+  level: 'emergency',
+  text: 'Intermediate or advanced signs of acute bilirubin encephalopathy require urgent exchange transfusion. Mobilize the exchange-capable NICU and start intensive phototherapy while preparing; do not wait for a bilirubin result.',
+  refs: ['aap2022'],
+};
+
 export function assess(input: AssessInput): Assessment | null {
-  const ms = [...input.measurements].filter((m) => Number.isFinite(m.ageHours) && Number.isFinite(m.value));
+  const ms = [...input.measurements].filter((m) => Number.isFinite(m.ageHours) && m.ageHours >= 0 && Number.isFinite(m.value) && m.value >= 0 && (m.method === 'TSB' || m.method === 'TcB'));
   if (ms.length === 0) return null;
   ms.sort((a, b) => a.ageHours - b.ageHours);
   const latest = ms[ms.length - 1];
@@ -63,14 +71,15 @@ export function assess(input: AssessInput): Assessment | null {
   const preterm =
     ga < 35 ? pretermRow(ga + (input.gaDays ?? 0) / 7 + latest.ageHours / 24 / 7) : null;
 
-  const thresholds = aap2022Thresholds(ga, latest.ageHours, withRiskFactors);
+  const isSerum = latest.method === 'TSB';
+  const thresholds = aap2022Thresholds(ga, latest.ageHours, withRiskFactors, isSerum && input.risingDespitePhototherapy);
   const photo = thresholds.phototherapy.value;
   const esc = thresholds.escalation.value;
   const exch = thresholds.exchange.value;
   const v = latest.value;
 
-  let zone: Zone = 'unknown';
-  if (photo != null) {
+  let zone: Zone = isSerum ? 'unknown' : 'screening';
+  if (isSerum && photo != null) {
     zone = 'below';
     if (v >= photo) zone = 'phototherapy';
     if (esc != null && v >= esc) zone = 'escalation';
@@ -79,8 +88,8 @@ export function assess(input: AssessInput): Assessment | null {
 
   const delta = photo != null ? photo - v : null;
   const tcbConfirm = latest.method === 'TcB' && tcbNeedsTsb(v, photo);
-  const rate = prev ? rateOfRise(prev, latest) : null;
-  const baRatio = input.albumin && input.albumin > 0 ? v / input.albumin : null;
+  const rate = prev && prev.method === latest.method ? rateOfRise(prev, latest) : null;
+  const baRatio = isSerum && photo != null && input.albumin && input.albumin > 0 ? v / input.albumin : null;
   const baThreshold = baRatioThreshold(ga, withRiskFactors);
 
   /* ---------- actions, most severe first ---------- */
@@ -91,37 +100,33 @@ export function assess(input: AssessInput): Assessment | null {
       refs: ['maisels2012'],
     });
   }
-  if (input.abeSigns) {
+  if (input.abeSigns) actions.unshift(ABE_ACTION);
+  if (!isSerum) {
     actions.push({
-      level: 'emergency',
-      text: 'Signs of intermediate/advanced acute bilirubin encephalopathy → urgent exchange transfusion, regardless of TSB, with intensive phototherapy while preparing.',
-      refs: ['aap2022'],
-    });
-  }
-  if (tcbConfirm) {
-    actions.push({
-      level: 'urgent',
-      text: 'TcB is ≥15 mg/dL or within 3 mg/dL of the phototherapy threshold → measure TSB before deciding. TcB can be used again ≥24 h after phototherapy ends.',
+      level: tcbConfirm ? 'urgent' : 'info',
+      text: tcbConfirm
+        ? (photo == null ? 'No applicable AAP threshold for this screen. Obtain a serum TSB for clinical assessment.' : 'Obtain serum TSB now: TcB is at least 15 mg/dL, at/above the phototherapy threshold, or within 3 mg/dL below it (KAS 6).')
+        : 'TcB is a screening result. Use serum TSB, not TcB, to make phototherapy, escalation and exchange decisions (KAS 3).',
       refs: ['aap2022'],
     });
   }
   if (zone === 'exchange') {
     actions.push({
       level: 'emergency',
-      text: 'At/above the exchange threshold → urgent exchange transfusion. Continue intensive phototherapy; TSB every 2 h until it is done or the TSB falls below the escalation threshold.',
+      text: 'TSB is at or above the exchange threshold: prepare for urgent exchange. If TSB falls below the exchange threshold during preparation and there are no intermediate/advanced ABE signs, exchange may be deferred. Continue intensive phototherapy and measure TSB at least every 2 h until it is below escalation (KAS 23).',
       refs: ['aap2022'],
     });
   }
   if (zone === 'escalation' || zone === 'exchange') {
     actions.push({
       level: 'emergency',
-      text: 'Escalation of care (medical emergency): NICU able to do exchange; intensive phototherapy; TSB at least every 2 h; CBC, type & crossmatch, albumin, chemistry panel; enteral feeding (IV fluids only if dehydrated).',
+      text: 'Escalation of care is a medical emergency: start IV hydration and emergent intensive phototherapy. Consult neonatology about urgent transfer to an exchange-capable NICU. Send STAT total and direct bilirubin, CBC, albumin, chemistries and type/crossmatch. Measure TSB at least every 2 h until below escalation (KAS 18–20).',
       refs: ['aap2022'],
     });
     if (rf.isoimmune) {
       actions.push({
         level: 'urgent',
-        text: 'Isoimmune hemolysis at escalation threshold → IVIG 0.5–1 g/kg IV over 2 h (may repeat in 12 h). Evidence is low certainty.',
+        text: 'For positive-DAT isoimmune hemolysis at escalation, IVIG 0.5–1 g/kg over 2 h is an option, not routine; may repeat in 12 h. Benefit is uncertain; do not delay exchange preparation.',
         refs: ['aap2022', 'cochraneIvig2018'],
       });
     }
@@ -131,10 +136,10 @@ export function assess(input: AssessInput): Assessment | null {
       refs: ['aap2022'],
     });
   }
-  if (zone === 'phototherapy') {
+  if (!input.abeSigns && zone === 'phototherapy') {
     actions.push({
       level: 'act',
-      text: 'Start intensive phototherapy now: irradiance ≥30 µW/cm²/nm, ~460–490 nm (blue–green), maximal skin exposure. Repeat TSB within 12 h; sooner if near escalation or hemolysis.',
+      text: input.receivedPhototherapy || input.risingDespitePhototherapy ? 'TSB is at or above the phototherapy threshold. Review response and treatment delivery promptly, and continue or restart intensive phototherapy as indicated. Use serum monitoring, not the routine discharge follow-up chart.' : 'Start intensive phototherapy now: irradiance ≥30 µW/cm²/nm, ~460–490 nm (blue–green), maximal skin exposure. Repeat TSB within 12 h; sooner if near escalation or hemolysis.',
       refs: ['aap2022', 'aap2011photo'],
     });
   }
@@ -152,10 +157,10 @@ export function assess(input: AssessInput): Assessment | null {
       refs: ['aap2022'],
     });
   }
-  if (latest.ageHours < 24 && v >= 0 && photo != null && v >= photo - 2) {
+  if (isSerum && latest.ageHours < 24 && photo != null && v >= photo) {
     actions.push({
       level: 'urgent',
-      text: 'Bilirubin at/near threshold in the first 24 h is usually pathologic — evaluate for hemolysis now.',
+      text: 'TSB at or above the phototherapy threshold before 24 h suggests hemolysis; evaluate promptly. Exchange thresholds before 24 h have greater uncertainty.',
       refs: ['aap2022'],
     });
   }
@@ -166,34 +171,34 @@ export function assess(input: AssessInput): Assessment | null {
       refs: ['aap2022'],
     });
   }
-  if (thresholds.exchange.status === 'not-embedded' && (zone === 'phototherapy' || zone === 'below') && photo != null && v >= photo) {
-    actions.push({
-      level: 'info',
-      text: 'For 35–37 weeks, check the official escalation/exchange curve (BiliTool/PediTools) — this app does not embed it.',
-      refs: ['aap2022', 'bilitool'],
-    });
+  if (isSerum && latest.ageHours < 24 && (zone === 'escalation' || zone === 'exchange')) {
+    actions.push({ level: 'info', text: 'AAP exchange thresholds in the first 24 h have greater uncertainty; consult neonatology urgently.', refs: ['aap2022'] });
   }
 
   let followUp: FollowUp | null = null;
-  if (zone === 'below' && delta != null) {
+  if (!input.abeSigns && !input.receivedPhototherapy && !input.risingDespitePhototherapy && input.context !== 'outpatient' && latest.ageHours >= 12 &&
+      (zone === 'below' || (zone === 'screening' && !tcbConfirm)) && delta != null && delta > 0) {
     followUp = followUpRecommendation(delta, latest.ageHours);
     actions.push({
       level: 'info',
-      text: `Below phototherapy threshold by ${delta.toFixed(1)} mg/dL. If no phototherapy this admission: ${followUp.action}`,
+      text: `Below phototherapy threshold by ${delta.toFixed(1)} mg/dL. For birth-discharge planning only, if no phototherapy this admission: ${followUp.action}`,
       refs: ['aap2022', 'kuzniewicz2021'],
     });
+  }
+  if ((input.receivedPhototherapy || input.risingDespitePhototherapy) && !input.abeSigns && (zone === 'below' || zone === 'screening')) {
+    actions.push({ level: 'info', text: 'After phototherapy, use KAS 16 rebound follow-up rather than the routine birth-discharge chart. Prefer serum TSB during treatment and for the first 24 hours after it stops.', refs: ['aap2022'] });
   }
   if (latest.ageHours < 12) {
     actions.push({
       level: 'info',
-      text: 'Thresholds are not computed before 12 h. Any visible jaundice <24 h → measure TSB/TcB now and evaluate for hemolysis.',
+      text: 'The AAP discharge follow-up chart does not apply before 12 h. Jaundice before 24 h warrants prompt bilirubin measurement and assessment.',
       refs: ['aap2022'],
     });
   }
   if (latest.ageHours > 336) {
     actions.push({
       level: 'info',
-      text: 'Beyond 14 days, AAP curves no longer apply: measure total AND direct/conjugated bilirubin (DB/CB ≥1.0 mg/dL → urgent GI referral).',
+      text: 'The AAP threshold tables end at 14 days. Persistent jaundice needs separate clinical assessment for cholestasis, including total and direct/conjugated bilirubin when indicated.',
       refs: ['harpavat2025', 'fawaz2017'],
     });
   }
