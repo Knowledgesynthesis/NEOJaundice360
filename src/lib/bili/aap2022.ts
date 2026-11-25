@@ -40,13 +40,13 @@ function validGa(gaWeeks: number): boolean {
 
 export function phototherapyCurve(gaWeeks: number, withRiskFactors: boolean): Curve | null {
   if (!validGa(gaWeeks)) return null;
-  const k = gaKey(gaWeeks, withRiskFactors);
+  const k = String(gaKey(gaWeeks, withRiskFactors));
   return withRiskFactors ? PHOTO_RF[k as keyof typeof PHOTO_RF] : PHOTO_NO_RF[k as keyof typeof PHOTO_NO_RF];
 }
 
 export function exchangeCurve(gaWeeks: number, withRiskFactors: boolean): Curve | null {
   if (!validGa(gaWeeks)) return null;
-  const k = Math.min(38, Math.floor(gaWeeks)) as keyof typeof EXCHANGE_NO_RF;
+  const k = String(Math.min(38, Math.floor(gaWeeks))) as keyof typeof EXCHANGE_NO_RF;
   return withRiskFactors ? EXCHANGE_RF[k] : EXCHANGE_NO_RF[k];
 }
 
