@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { Activity, AlertOctagon, Plus, Share2, Trash2 } from 'lucide-react';
-import { assess, type Zone } from '@/lib/bili/assess';
+import { ABE_ACTION, assess, type Zone } from '@/lib/bili/assess';
 import {
-  EXCHANGE_NO_RF_38,
-  EXCHANGE_RF_38,
+  ESCALATION_OFFSET,
+  MAX_HOURS,
   exchangeCurve,
   phototherapyCurve,
   sampleCurve,
@@ -34,30 +34,36 @@ interface Row {
 const RF_KEYS = Object.keys(NEUROTOXICITY_RF_LABELS) as (keyof NeurotoxicityRiskFactors)[];
 
 function parseParams(sp: URLSearchParams) {
-  const ga = Number(sp.get('ga'));
+  const rawGa = sp.get('ga');
+  const ga = rawGa?.trim() ? Number(rawGa) : NaN;
   const rows: Row[] = (sp.get('m') ?? '')
     .split(',')
     .filter(Boolean)
-    .map((s) => {
+    .flatMap((s): Row[] => {
       const [h, v, method] = s.split(':');
-      return { ageHours: Number(h), value: Number(v), method: method === 'TcB' ? 'TcB' : 'TSB' } as Row;
-    })
-    .filter((r) => Number.isFinite(r.ageHours) && Number.isFinite(r.value));
+      if (!h?.trim() || !v?.trim() || (method !== 'TcB' && method !== 'TSB')) return [];
+      const ageHours = Number(h), value = Number(v);
+      return Number.isFinite(ageHours) && ageHours >= 0 && Number.isFinite(value) && value >= 0 ? [{ ageHours, value, method }] : [];
+    });
   const rfList = (sp.get('rf') ?? '').split(',');
   const rf = { ...NO_RISK_FACTORS };
   for (const k of RF_KEYS) if (rfList.includes(k)) rf[k] = true;
   const alb = Number(sp.get('alb'));
   return {
-    ga: Number.isFinite(ga) && ga >= 23 && ga <= 42 ? ga : 39,
+    ga: Number.isInteger(ga) && ga >= 23 && ga <= 42 ? ga : rawGa == null ? 39 : ('' as const),
     gaDays: Math.min(6, Math.max(0, Number(sp.get('gad')) || 0)),
-    rows: rows.length ? rows : [{ ageHours: 36, value: 10, method: 'TSB' } as Row],
+    rows: sp.has('m') ? (rows.length ? rows : [{ ageHours: '', value: '', method: 'TSB' } as Row]) : [{ ageHours: 36, value: 10, method: 'TSB' } as Row],
     rf,
     albumin: Number.isFinite(alb) && alb > 0 ? alb : ('' as const),
     abe: sp.get('abe') === '1',
+    outpatient: sp.get('context') === 'outpatient',
+    receivedPhototherapy: sp.get('priorPhoto') === '1',
+    risingDespitePhototherapy: sp.get('riseOnPhoto') === '1',
   };
 }
 
 const zoneMeta: Record<Zone, { label: string; cls: string; icon?: boolean }> = {
+  screening: { label: 'TcB screening only — treatment decisions require TSB', cls: 'border-border bg-surface-2 text-fg' },
   below: { label: 'Below phototherapy threshold', cls: 'border-ok/50 bg-ok/10 text-ok' },
   phototherapy: { label: 'Phototherapy indicated', cls: 'border-photo/50 bg-photo/10 text-photo' },
   escalation: { label: 'ESCALATION OF CARE — emergency', cls: 'border-esc/60 bg-esc/12 text-esc', icon: true },
@@ -66,12 +72,9 @@ const zoneMeta: Record<Zone, { label: string; cls: string; icon?: boolean }> = {
 };
 
 function ProvenanceBadge({ t }: { t: ThresholdValue }) {
-  if (t.status === 'not-embedded') return <Badge tone="neutral">not embedded</Badge>;
-  if (t.status === 'too-early' || t.status === 'too-late') return <Badge tone="neutral">out of range</Badge>;
-  if (t.status === 'extrapolated') return <Badge tone="esc">extrapolated</Badge>;
-  if (t.provenance === 'approximate') return <Badge tone="esc">approx. ±0.5</Badge>;
-  if (t.provenance === 'interpolated') return <Badge tone="info">GA-interpolated</Badge>;
-  return <Badge tone="ok">{t.atPublishedHour ? 'published value' : 'published curve'}</Badge>;
+  return t.completedHour == null
+    ? <Badge tone="neutral">not applicable</Badge>
+    : <Badge tone="ok">AAP hour {t.completedHour}</Badge>;
 }
 
 export default function BiliCalculator({ compactIntro = false }: { compactIntro?: boolean }) {
@@ -85,6 +88,9 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
   const [rf, setRf] = useState<NeurotoxicityRiskFactors>(init.rf);
   const [albumin, setAlbumin] = useState<number | ''>(init.albumin);
   const [abe, setAbe] = useState(init.abe);
+  const [outpatient, setOutpatient] = useState(init.outpatient);
+  const [receivedPhoto, setReceivedPhoto] = useState(init.receivedPhototherapy);
+  const [rising, setRising] = useState(init.risingDespitePhototherapy);
   const [copied, setCopied] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -102,7 +108,7 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
     };
   }, []);
 
-  const gaNum = typeof ga === 'number' ? Math.min(42, Math.max(23, Math.floor(ga))) : 39;
+  const gaNum = typeof ga === 'number' && Number.isInteger(ga) && ga >= 23 && ga <= 42 ? ga : NaN;
   const measurements = useMemo(
     () =>
       rows
@@ -113,7 +119,7 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
 
   const result = useMemo(
     () =>
-      measurements.length
+      measurements.length && Number.isFinite(gaNum)
         ? assess({
             gaWeeks: gaNum,
             gaDays: typeof gaDays === 'number' ? gaDays : 0,
@@ -121,40 +127,47 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
             riskFactors: rf,
             albumin: albumin === '' ? null : albumin,
             abeSigns: abe,
+            context: outpatient ? 'outpatient' : undefined,
+            receivedPhototherapy: receivedPhoto,
+            risingDespitePhototherapy: rising,
           })
         : null,
-    [gaNum, gaDays, measurements, rf, albumin, abe],
+    [gaNum, gaDays, measurements, rf, albumin, abe, receivedPhoto, rising, outpatient],
   );
 
   const withRf = result?.withRiskFactors ?? false;
   const latestAge = result?.latest.ageHours ?? 48;
+  const withExchangeRf = withRf || (rising && result?.latest.method === 'TSB');
   const xMax = latestAge > 168 ? 336 : 168;
 
   const series: Series[] = useMemo(() => {
-    if (gaNum < 35) return [];
+    if (!(gaNum >= 35)) return [];
     const s: Series[] = [
-      { id: 'photo', label: 'Phototherapy', color: 'var(--photo)', fillAbove: true, points: sampleCurve(phototherapyCurve(gaNum, withRf), 12, xMax, 2) },
+      { id: 'photo', label: 'Phototherapy', color: 'var(--photo)', fillAbove: true, points: sampleCurve(phototherapyCurve(gaNum, withRf), 0, xMax) },
     ];
-    const ex = exchangeCurve(gaNum, withRf);
+    const ex = exchangeCurve(gaNum, withExchangeRf);
     if (ex) {
-      const exPts = sampleCurve(ex, 12, xMax, 2);
-      s.push({ id: 'esc', label: 'Escalation of care', color: 'var(--esc)', dashed: true, fillAbove: true, points: exPts.map((p) => ({ ...p, v: p.v - 2 })) });
+      const exPts = sampleCurve(ex, 0, xMax);
+      s.push({ id: 'esc', label: 'Escalation of care', color: 'var(--esc)', dashed: true, fillAbove: true, points: exPts.map((p) => ({ ...p, v: p.v - ESCALATION_OFFSET })) });
       s.push({ id: 'exch', label: 'Exchange transfusion', color: 'var(--exch)', fillAbove: true, points: exPts });
     }
     return s;
-  }, [gaNum, withRf, xMax]);
+  }, [gaNum, withRf, withExchangeRf, xMax]);
 
   const updateRow = (i: number, patch: Partial<Row>) => setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)));
 
   const share = async () => {
     const p = new URLSearchParams();
-    p.set('ga', String(gaNum));
+    p.set('ga', Number.isFinite(gaNum) ? String(gaNum) : '');
     if (gaDays) p.set('gad', String(gaDays));
     p.set('m', measurements.map((m) => `${m.ageHours}:${m.value}:${m.method}`).join(','));
     const on = RF_KEYS.filter((k) => rf[k]);
     if (on.length) p.set('rf', on.join(','));
     if (albumin !== '') p.set('alb', String(albumin));
     if (abe) p.set('abe', '1');
+    if (outpatient) p.set('context', 'outpatient');
+    if (receivedPhoto) p.set('priorPhoto', '1');
+    if (rising) p.set('riseOnPhoto', '1');
     setSp(p, { replace: true });
     try {
       await navigator.clipboard.writeText(window.location.href.split('?')[0] + '?' + p.toString());
@@ -166,14 +179,14 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
   };
 
   const t = result?.thresholds;
+  const displayedZone = abe ? 'exchange' : result?.zone ?? 'unknown';
   const nice = gaNum >= 38 && result ? nice38Thresholds(result.latest.ageHours) : null;
 
   return (
     <div ref={rootRef} className="space-y-6" id="calculator">
       {!compactIntro && (
         <Callout kind="info" title="What this calculator embeds">
-          AAP 2022 phototherapy curves for 35 to ≥40 weeks (with and without neurotoxicity risk factors) from 12 h to 14 days, plus escalation and
-          exchange curves for ≥38 weeks. Each value shows where it came from. For 35–37-week exchange curves, use BiliTool or PediTools.
+          Published AAP 2022 hourly phototherapy and exchange tables for infants born at ≥35 weeks, from 1 through 336 completed hours. The escalation line is 2 mg/dL below exchange. Treatment decisions use serum TSB, not TcB.
           <Cite ids={['aap2022', 'bilitool']} />
         </Callout>
       )}
@@ -250,6 +263,23 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
           <div className="grid grid-cols-1 gap-3">
             <NumberField label="Albumin (optional)" value={albumin} onChange={setAlbumin} min={1} max={5} step={0.1} suffix="g/dL" hint="<3.0 g/dL counts as a risk factor; enables the B/A ratio" />
             <Check
+              label="Outpatient assessment (not birth-discharge planning)"
+              checked={outpatient}
+              onChange={setOutpatient}
+            />
+            <Check
+              label="Phototherapy already started or completed"
+              hint="Suppresses routine discharge follow-up. Use the AAP rebound schedule once treatment stops."
+              checked={receivedPhoto || rising}
+              onChange={(v) => { setReceivedPhoto(v); if (!v) setRising(false); }}
+            />
+            <Check
+              label="TSB rising despite ongoing phototherapy"
+              hint="Select only if serial serum TSB has risen during treatment. A pre-treatment value or TcB does not establish this. Affects exchange/escalation only (KAS 17)."
+              checked={rising}
+              onChange={setRising}
+            />
+            <Check
               label="Signs of intermediate/advanced acute bilirubin encephalopathy"
               hint="Hypertonia, arching, retrocollis, opisthotonos, high-pitched cry, recurrent apnea"
               checked={abe}
@@ -260,27 +290,38 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
           <Button variant="outline" onClick={share} className="w-full">
             <Share2 className="h-4 w-4" /> {copied ? 'Link copied' : 'Copy shareable link'}
           </Button>
+          <p className="text-xs text-muted">Links contain the entered values. Share only synthetic examples, never patient information.</p>
         </Card>
 
         {/* ------------------------------ results ------------------------------ */}
         <div ref={resultsRef} id="calc-results" className="min-w-0 scroll-mt-20 space-y-6">
           {!result ? (
-            <Card>
-              <p className="text-sm text-muted">Enter an age and a bilirubin value.</p>
-            </Card>
+            abe ? (
+              <div role="alert" className="rounded-2xl border border-exch/60 bg-exch/12 p-4 text-exch">
+                <p className="text-lg font-extrabold">ABE signs — urgent exchange transfusion</p>
+                <p className="text-fg">{ABE_ACTION.text} <Cite ids={['aap2022']} /></p>
+              </div>
+            ) : (
+              <Card>
+                <p className="text-sm text-muted">Enter a valid gestational age, postnatal age and bilirubin value.</p>
+              </Card>
+            )
           ) : (
             <>
-              <div role="status" aria-live="polite" className={cn('flex items-center gap-3 rounded-2xl border p-4', zoneMeta[result.zone].cls)}>
-                {zoneMeta[result.zone].icon ? <AlertOctagon className="h-6 w-6 shrink-0" /> : <Activity className="h-6 w-6 shrink-0" />}
+              <div role="status" aria-live="polite" className={cn('flex items-center gap-3 rounded-2xl border p-4', zoneMeta[displayedZone].cls)}>
+                {zoneMeta[displayedZone].icon ? <AlertOctagon className="h-6 w-6 shrink-0" /> : <Activity className="h-6 w-6 shrink-0" />}
                 <div>
-                  <p className="text-lg font-extrabold">{abe ? 'ABE signs — urgent exchange transfusion' : zoneMeta[result.zone].label}</p>
+                  <p className="text-lg font-extrabold">{abe ? 'ABE signs — urgent exchange transfusion' : zoneMeta[displayedZone].label}</p>
                   <p className="text-sm text-fg/80">
-                    Latest {result.latest.method} {formatBili(result.latest.value, unit)} at {result.latest.ageHours} h · curve: {t!.phototherapyCurveLabel}
+                    Latest {result.latest.method} {formatBili(result.latest.value, unit)} at {result.latest.ageHours} h
+                    {t?.phototherapy.value != null && <> · Photo: {t.phototherapyCurveLabel}</>}
                   </p>
                 </div>
               </div>
 
               {gaNum >= 35 && t && (
+                <div className="space-y-2">
+                {t.exchange.value != null && <p className="text-xs text-muted">Exchange and escalation: {t.exchangeCurveLabel}{latestAge < 24 ? ' · greater uncertainty in the first 24 h' : ''}</p>}
                 <div className="grid gap-3 sm:grid-cols-3">
                   {[
                     { k: 'Phototherapy', v: t.phototherapy, tone: 'text-photo' },
@@ -296,6 +337,7 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
                       {c.v.value == null && c.v.note && <p className="mt-2 text-xs text-muted">{c.v.note}</p>}
                     </Card>
                   ))}
+                </div>
                 </div>
               )}
 
@@ -337,7 +379,7 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
                   <BiliChart
                     title={`AAP 2022 thresholds — ${t?.phototherapyCurveLabel}`}
                     series={series}
-                    markers={measurements.map((m) => ({ h: m.ageHours, v: m.value, method: m.method }))}
+                    markers={measurements.filter((m) => m.ageHours >= 0 && m.ageHours <= MAX_HOURS).map((m) => ({ h: m.ageHours, v: m.value, method: m.method }))}
                     unit={unit}
                     xMax={xMax}
                     yMax={unit === 'mgdl' ? 30 : 30}
@@ -408,7 +450,7 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
                 </Card>
               )}
 
-              {result.zone === 'phototherapy' && !withRf && gaNum >= 38 && result.latest.ageHours >= 48 && (
+              {!abe && !receivedPhoto && !rising && result.zone === 'phototherapy' && !withRf && gaNum >= 38 && result.latest.ageHours >= 48 && (
                 <Callout kind="pearl" title="Home phototherapy may be an option if ALL apply">
                   <ul className="ml-4 list-disc">
                     {HOME_PHOTOTHERAPY_CRITERIA.map((c) => (
@@ -431,11 +473,11 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
           }}
           className={cn(
             'no-print fixed inset-x-3 bottom-3 z-30 flex items-center justify-between gap-3 rounded-2xl border p-3 text-sm shadow-xl backdrop-blur lg:hidden',
-            zoneMeta[result.zone].cls,
+            zoneMeta[displayedZone].cls,
             'bg-surface/95',
           )}
         >
-          <span className="font-bold">{abe ? 'ABE signs — exchange' : zoneMeta[result.zone].label}</span>
+          <span className="font-bold">{abe ? 'ABE signs — exchange' : zoneMeta[displayedZone].label}</span>
           <span className="tabular shrink-0 text-xs text-fg">
             Photo {formatBili(t?.phototherapy.value, unit)} ↓
           </span>
@@ -445,20 +487,9 @@ export default function BiliCalculator({ compactIntro = false }: { compactIntro?
       <details className="rounded-2xl border border-border bg-surface p-4 text-sm">
         <summary className="cursor-pointer font-semibold">Data provenance and limits</summary>
         <ul className="mt-3 ml-4 list-disc space-y-1.5 text-muted">
-          <li>
-            <strong className="text-fg">Published:</strong> AAP 2022 supplemental-table values at 24/48/72/96 h for 35, 37, 38, 39, ≥40 wk (no risk factors), 35 and ≥38 wk (risk
-            factors), and ≥38-wk exchange without risk factors ({EXCHANGE_NO_RF_38.values.join(' / ')} mg/dL), cross-checked across independent implementations.
-          </li>
-          <li>
-            <strong className="text-fg">Interpolated:</strong> 36-wk (no RF, except the published 48-h value) and 36/37-wk risk-factor curves; hours between anchors use a monotone
-            spline (typically within 0.2 mg/dL).
-          </li>
-          <li>
-            <strong className="text-fg">Approximate:</strong> ≥38-wk exchange with risk factors ({EXCHANGE_RF_38.values.join(' / ')} mg/dL, ±0.5).
-          </li>
-          <li>
-            <strong className="text-fg">Not computed:</strong> &lt;12 h; &gt;14 days; 35–37-wk escalation/exchange. Curves are flat from 96 h to 14 days.
-          </li>
+          <li><strong className="text-fg">Published hourly rows:</strong> AAP 2022 Supplemental Tables 1–4, with the published late-age constant rows where applicable. No inferred gestational-age curves or extrapolation. Fractional ages use the completed hour.</li>
+          <li><strong className="text-fg">Limits:</strong> AAP treatment tables apply at ≥35 weeks and 1–336 hours; exchange thresholds before 24 h have greater uncertainty. The discharge follow-up table starts at 12 h and applies only before discharge after birth with no prior phototherapy.</li>
+          <li><strong className="text-fg">Serum only for treatment:</strong> TcB uses the screening/confirmation rules. Confirmed TSB rising despite phototherapy selects the Table 4 exchange/escalation curve, not the phototherapy risk curve.</li>
           <li>Always use TOTAL bilirubin; if direct bilirubin exceeds 50% of total, consult an expert.</li>
         </ul>
       </details>

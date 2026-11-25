@@ -54,39 +54,32 @@ describe('content integrity', () => {
           riskFactors: { ...NO_RISK_FACTORS, ...s.calc.rf },
           albumin: s.calc.albumin,
           abeSigns: s.calc.abeSigns,
+          context: s.calc.context,
+          risingDespitePhototherapy: s.calc.risingDespitePhototherapy,
         })!;
         expect(a.zone, `${c.id}: ${s.title}`).toBe(s.calc.expectZone);
       }
     }
   });
 
-  it('case conclusions that depend on the ±0.5 approximate ≥38-wk RF exchange curve hold across that uncertainty', () => {
+  it('Rh escalation and exchange teaching match Table 4, not the old approximate curve', () => {
     const rh = CASES.find((c) => c.id === 'rh')!;
-    const esc = rh.steps[1].calc!;
-    const ex = rh.steps[2].calc!;
-    const a1 = assess({ gaWeeks: esc.gaWeeks, measurements: esc.measurements, riskFactors: { ...NO_RISK_FACTORS, isoimmune: true } })!;
-    const a2 = assess({ gaWeeks: ex.gaWeeks, measurements: ex.measurements, riskFactors: { ...NO_RISK_FACTORS, isoimmune: true } })!;
-    const v1 = esc.measurements.at(-1)!.value;
-    const v2 = ex.measurements.at(-1)!.value;
-    expect(v1).toBeGreaterThanOrEqual(a1.thresholds.escalation.value! + 0.5);
-    expect(v1).toBeLessThan(a1.thresholds.exchange.value! - 0.5);
-    expect(v2).toBeGreaterThanOrEqual(a2.thresholds.exchange.value! + 0.5);
-  });
-
-  it('late-preterm case bands are robust to the interpolated 36-week row (35- vs 37-week bounds)', () => {
-    for (const ga of [35, 37]) {
-      const a = assess({ gaWeeks: ga, measurements: [{ ageHours: 30, value: 9.4, method: 'TSB' }], riskFactors: NO_RISK_FACTORS })!;
-      expect(a.followUp!.band).toBe('2.0-3.4');
-      const b = assess({ gaWeeks: ga, measurements: [{ ageHours: 30, value: 10.0, method: 'TcB' }], riskFactors: NO_RISK_FACTORS })!;
-      expect(b.tcbConfirm).toBe(true);
+    for (const [index, exchange, escalation] of [[1, 18.3, 16.3], [2, 18.8, 16.8]]) {
+      const calc = rh.steps[index].calc!;
+      const a = assess({ ...calc, riskFactors: { ...NO_RISK_FACTORS, ...calc.rf } })!;
+      expect(a.thresholds.exchange.value).toBe(exchange);
+      expect(a.thresholds.escalation.value).toBe(escalation);
+      expect(a.actions.some((x) => /IV hydration/.test(x.text))).toBe(true);
     }
   });
 
-  it('G6PD case conclusion holds for any plausible 37-week RF value (35–38-week bounds)', () => {
-    for (const ga of [35, 38]) {
-      const a = assess({ gaWeeks: ga, measurements: [{ ageHours: 100, value: 18.4, method: 'TSB' }], riskFactors: { ...NO_RISK_FACTORS, g6pd: true } })!;
-      expect(a.zone).toBe('phototherapy');
-    }
+  it('uses the exact late-preterm row and reserves treatment decisions for TSB', () => {
+    const a = assess({ gaWeeks: 36, measurements: [{ ageHours: 30, value: 9.4, method: 'TSB' }], riskFactors: NO_RISK_FACTORS })!;
+    const b = assess({ gaWeeks: 36, measurements: [{ ageHours: 30, value: 10.0, method: 'TcB' }], riskFactors: NO_RISK_FACTORS })!;
+    expect(a.thresholds.phototherapy.value).toBe(12.1);
+    expect(a.followUp?.band).toBe('2.0-3.4');
+    expect(b.zone).toBe('screening');
+    expect(b.tcbConfirm).toBe(true);
   });
 
   it('glossary terms are unique', () => {

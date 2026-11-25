@@ -65,8 +65,8 @@ export function rateOfRise(a: Measurement, b: Measurement): RateOfRise | null {
 export function tcbNeedsTsb(tcb: number, phototherapyThreshold: number | null): boolean {
   if (tcb >= 15) return true;
   if (phototherapyThreshold == null) return true;
-  // 'within 3 mg/dL' read inclusively (conservative); rounded to 0.1 to avoid float artefacts
-  return Math.round((phototherapyThreshold - tcb) * 10) / 10 <= 3;
+  // Inclusive, with a small tolerance for the mg/dL conversion or decimal subtraction.
+  return phototherapyThreshold - tcb <= 3 + 1e-9;
 }
 
 /* ---------------- Bilirubin/albumin ratio (AAP 2022, retained from 2004) ---------------- */
@@ -210,12 +210,15 @@ export function stopPhototherapyAt(thresholdAtStart: number) {
 }
 
 /* ---------------- Rebound check after phototherapy (AAP 2022) ---------------- */
-export function reboundPlan(opts: { startedBefore48h: boolean; hemolysis: boolean; readmitted: boolean }): string {
-  if (opts.readmitted && !opts.hemolysis && !opts.startedBefore48h) {
-    return 'Readmitted infant: bilirubin 1–2 days after stopping, or clinical follow-up 1–2 days after stopping.';
+export type ReboundContext = 'birth-admission' | 'readmitted-after-birth-phototherapy' | 'first-treatment-on-readmission-or-home';
+
+/** KAS 16: prior birth-admission treatment changes the readmission follow-up schedule. */
+export function reboundPlan(opts: { startedBefore48h: boolean; hemolysis: boolean; context: ReboundContext }): string {
+  if (opts.context === 'birth-admission' && (opts.startedBefore48h || opts.hemolysis)) {
+    return 'Check TSB 6–12 h after stopping, then repeat bilirubin the next day.';
   }
-  if (opts.startedBefore48h || opts.hemolysis) {
-    return 'Higher rebound risk: measure TSB 6–12 h after stopping AND again the next day.';
+  if (opts.context === 'first-treatment-on-readmission-or-home') {
+    return 'Reassess in 1–2 days after stopping to decide whether bilirubin testing is needed, or measure bilirubin in that interval.';
   }
-  return 'Measure bilirubin the day after stopping (TcB acceptable if ≥24 h since phototherapy).';
+  return 'Measure bilirubin the day after stopping phototherapy.';
 }

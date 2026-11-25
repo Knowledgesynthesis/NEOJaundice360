@@ -21,13 +21,13 @@ export default function ThresholdsPage() {
           id: `n${g}`,
           label: g === 40 ? '≥40 wk' : `${g} wk`,
           color: gaColors[i],
-          points: sampleCurve(PHOTO_NO_RF[g], 12, 168, 2),
+          points: sampleCurve(PHOTO_NO_RF[g], 1, 168),
         }))
       : ([35, 36, 37, 38] as const).map((g, i) => ({
           id: `r${g}`,
           label: g === 38 ? '≥38 wk' : `${g} wk`,
           color: gaColors[i],
-          points: sampleCurve(PHOTO_RF[g], 12, 168, 2),
+          points: sampleCurve(PHOTO_RF[g], 1, 168),
         }));
 
   return (
@@ -82,7 +82,7 @@ export default function ThresholdsPage() {
         />
         <BiliChart title="AAP 2022 phototherapy thresholds by gestational age" series={curves} unit={unit} xMax={168} yMax={25} />
         <p className="mt-3 text-sm text-muted">
-          Each extra week of gestation raises the threshold ~0.5 mg/dL; a risk factor lowers it ~1.5–3.5 mg/dL. All curves flatten at 96 h and stay flat to 14 days.
+          Curves use the published AAP hourly rows. Thresholds can change after 96 hours, and the age at which a curve levels off varies by gestational age and risk group.
           At 48 h a ≥40-week infant without risk factors is treated at {formatBili(17, unit)}; a 35-week infant with a risk factor at {formatBili(12.2, unit)}.
           <Cite ids={['aap2022']} />
         </p>
@@ -153,7 +153,7 @@ export default function ThresholdsPage() {
           'Escalation-of-care threshold = exchange threshold − 2 mg/dL.',
           'Follow-up is set by the distance below the phototherapy threshold, measured at ≥12 h.',
           'Units: mg/dL × 17.1 = µmol/L.',
-          'Thresholds are flat from 96 h to 14 days; after 2 weeks the question becomes “is this cholestasis?”.',
+          'The hourly tables end at 14 days; use the exact hour rather than assuming a 96-hour plateau. Persistent jaundice needs a separate assessment for cholestasis.',
         ]}
       />
       <ModuleCheck module="thresholds" />

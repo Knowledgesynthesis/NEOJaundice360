@@ -1,15 +1,17 @@
 import { Printer } from 'lucide-react';
 import { Button, Card, PageHeader, Table } from '@/components/ui';
-import { PHOTO_NO_RF, PHOTO_RF, EXCHANGE_NO_RF_38, EXCHANGE_RF_38 } from '@/lib/bili/aap2022';
+import { PHOTO_NO_RF, PHOTO_RF, EXCHANGE_NO_RF, EXCHANGE_RF } from '@/lib/bili/aap2022';
 import { formatBili } from '@/lib/bili/units';
 import { useApp } from '@/stores/appStore';
 
 export default function QuickReferencePage() {
   const unit = useApp((s) => s.unit);
   const f = (v: number) => formatBili(v, unit, false);
+  const hours = [24, 48, 72, 96] as const;
+  const cells = (row: readonly (number | null)[]) => hours.map((h) => row[h] == null ? '—' : f(row[h]));
   const photoRows = [
-    ...([35, 36, 37, 38, 39, 40] as const).map((g) => [`${g === 40 ? '≥40' : g} wk · no RF`, ...PHOTO_NO_RF[g].values.map(f)]),
-    ...([35, 36, 37, 38] as const).map((g) => [`${g === 38 ? '≥38' : g} wk · RF`, ...PHOTO_RF[g].values.map(f)]),
+    ...([35, 36, 37, 38, 39, 40] as const).map((g) => [`${g === 40 ? '≥40' : g} wk · no RF`, ...cells(PHOTO_NO_RF[g])]),
+    ...([35, 36, 37, 38] as const).map((g) => [`${g === 38 ? '≥38' : g} wk · RF`, ...cells(PHOTO_RF[g])]),
   ];
 
   return (
@@ -46,15 +48,15 @@ export default function QuickReferencePage() {
 
       <Card>
         <h2 className="mb-2 font-bold">AAP 2022 phototherapy thresholds ({unit === 'mgdl' ? 'mg/dL' : 'µmol/L'})</h2>
-        <Table head={['Curve', '24 h', '48 h', '72 h', '≥96 h']} rows={photoRows} caption="Flat from 96 h to 14 days. 36-wk and 36/37-wk RF rows are interpolated." />
-        <h3 className="mt-4 mb-2 font-semibold">Exchange (≥38 wk)</h3>
+        <Table head={['Curve', '24 h', '48 h', '72 h', '96 h']} rows={photoRows} caption="AAP Supplemental Tables 1–2; these are selected hours only. Use the calculator for the exact hour." />
+        <h3 className="mt-4 mb-2 font-semibold">Exchange transfusion thresholds</h3>
         <Table
-          head={['Curve', '24 h', '48 h', '72 h', '≥96 h']}
+          head={['Curve', '24 h', '48 h', '72 h', '96 h']}
           rows={[
-            ['No RF', ...EXCHANGE_NO_RF_38.values.map(f)],
-            ['RF (≈ ±0.5)', ...EXCHANGE_RF_38.values.map(f)],
+            ...([35, 36, 37, 38] as const).map((g) => [`${g === 38 ? '≥38' : g} wk · no RF`, ...cells(EXCHANGE_NO_RF[g])]),
+            ...([35, 36, 37, 38] as const).map((g) => [`${g === 38 ? '≥38' : g} wk · RF or rising on treatment`, ...cells(EXCHANGE_RF[g])]),
           ]}
-          caption="35–37 wk exchange: use the official figure (BiliTool/PediTools)."
+          caption="AAP Supplemental Tables 3–4. Rising serum TSB despite ongoing phototherapy selects Table 4, not a lower phototherapy line."
         />
       </Card>
 
@@ -78,7 +80,7 @@ export default function QuickReferencePage() {
             <li>Intensive phototherapy: ≥30 µW/cm²/nm, ~460–490 nm, max skin; TSB within 12 h.</li>
             <li>Stop at ≥2 mg/dL below the threshold at start.</li>
             <li>Rebound: started &lt;48 h or hemolysis → TSB 6–12 h after + next day.</li>
-            <li>Escalation: NICU, TSB q2h, CBC/type &amp; cross/albumin/chem, IVIG 0.5–1 g/kg if isoimmune.</li>
+            <li>Escalation: IV hydration, emergent intensive phototherapy, urgent exchange-capable NICU consultation; STAT total/direct bilirubin, CBC, type/cross, albumin and chemistries; TSB at least q2h. IVIG is an option for positive-DAT isoimmune hemolysis at escalation.</li>
             <li>Exchange at threshold or any intermediate/advanced ABE sign; draw G6PD first.</li>
             <li>B/A for exchange: 8.0 / 7.2 / 6.8.</li>
           </ul>

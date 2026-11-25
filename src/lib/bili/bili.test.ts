@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   aap2022Thresholds,
-  ANCHOR_HOURS,
-  EXCHANGE_NO_RF_38,
-  EXCHANGE_RF_38,
+  EXCHANGE_NO_RF,
+  EXCHANGE_RF,
   evaluateCurve,
   PHOTO_NO_RF,
   PHOTO_RF,
@@ -23,113 +22,65 @@ import { assess } from './assess';
 import { formatBili, toMgdl, toUmol } from './units';
 
 const allCurves = [
-  ...Object.entries(PHOTO_NO_RF).map(([k, c]) => [`photo noRF ${k}`, c] as const),
-  ...Object.entries(PHOTO_RF).map(([k, c]) => [`photo RF ${k}`, c] as const),
-  ['exchange noRF ≥38', EXCHANGE_NO_RF_38] as const,
-  ['exchange RF ≥38', EXCHANGE_RF_38] as const,
+  ...Object.entries(PHOTO_NO_RF).map(([g, c]) => [`photo noRF ${g}`, c] as const),
+  ...Object.entries(PHOTO_RF).map(([g, c]) => [`photo RF ${g}`, c] as const),
+  ...Object.entries(EXCHANGE_NO_RF).map(([g, c]) => [`exchange noRF ${g}`, c] as const),
+  ...Object.entries(EXCHANGE_RF).map(([g, c]) => [`exchange RF ${g}`, c] as const),
 ];
 
-describe('AAP 2022 curves — published anchor values', () => {
+describe('AAP 2022 Supplemental Tables 1–4', () => {
   it.each([
-    [40, false, [13.3, 17.0, 19.8, 21.8]],
-    [39, false, [12.8, 16.6, 19.5, 21.5]],
-    [38, false, [12.3, 16.0, 18.8, 20.7]],
-    [37, false, [11.7, 15.4, 18.1, 20.0]],
-    [35, false, [10.6, 14.2, 16.8, 18.6]],
-    [38, true, [10.5, 14.0, 16.6, 18.2]],
-    [35, true, [8.9, 12.2, 14.6, 16.1]],
-  ] as const)('GA %i, RF=%s returns the published values at 24/48/72/96 h', (ga, rf, expected) => {
-    ANCHOR_HOURS.forEach((h, i) => {
-      const r = aap2022Thresholds(ga, h, rf).phototherapy;
-      expect(r.value).toBeCloseTo(expected[i], 6);
-      expect(r.atPublishedHour).toBe(true);
-    });
+    [35, 48, false, 14.2, 20.7],
+    [35, 48, true, 12.2, 18.5],
+    [39, 80, false, 20.2, 26.4],
+    [39, 80, true, 17.2, 22.7],
+    [40, 93, false, 21.6, 26.9],
+    [40, 96, false, 21.8, 27],
+  ] as const)('35–40 wk table value at GA %i, hour %i, with risks %s', (ga, h, risk, photo, exchange) => {
+    const t = aap2022Thresholds(ga, h, risk);
+    expect(t.phototherapy.value).toBe(photo);
+    expect(t.exchange.value).toBe(exchange);
+    expect(t.escalation.value).toBeCloseTo(exchange - 2, 8);
+    expect(t.phototherapy.completedHour).toBe(h);
   });
 
-  it('36-week no-RF curve hits the published 48 h value (14.8)', () => {
-    expect(aap2022Thresholds(36, 48, false).phototherapy.value).toBeCloseTo(14.8, 6);
-  });
-
-  it('≥38-week no-RF exchange anchors', () => {
-    expect(aap2022Thresholds(39, 24, false).exchange.value).toBeCloseTo(21.4, 6);
-    expect(aap2022Thresholds(41, 96, false).exchange.value).toBeCloseTo(27.0, 6);
-  });
-
-  it('GA ≥40 maps to the 40-week curve; ≥38 maps to the 38-week RF curve', () => {
+  it('uses completed gestational and postnatal hours, with no invented hour zero or post-limit rows', () => {
     expect(phototherapyCurve(42, false)).toBe(PHOTO_NO_RF[40]);
     expect(phototherapyCurve(41, true)).toBe(PHOTO_RF[38]);
-    expect(phototherapyCurve(37.9, false)).toBe(PHOTO_NO_RF[37]); // completed weeks
-  });
-});
-
-describe('AAP 2022 curves — structural invariants (stress)', () => {
-  it.each(allCurves)('%s is non-decreasing from 12 h to 336 h and flat after 96 h', (_name, curve) => {
-    let prev = -Infinity;
-    for (let h = 12; h <= 336; h += 0.5) {
-      const r = evaluateCurve(curve, h);
-      expect(r.value).not.toBeNull();
-      expect(Number.isFinite(r.value!)).toBe(true);
-      expect(r.value!).toBeGreaterThanOrEqual(prev - 1e-9);
-      prev = r.value!;
+    expect(phototherapyCurve(37.9, false)).toBe(PHOTO_NO_RF[37]);
+    expect(aap2022Thresholds(39, 80.75, false).phototherapy.completedHour).toBe(80);
+    expect(aap2022Thresholds(39, 1, false).phototherapy.value).toBe(8.4);
+    for (const age of [-1, 0, 0.9, 336.2, 400, NaN]) {
+      expect(aap2022Thresholds(39, age, false).exchange.value).toBeNull();
     }
-    expect(evaluateCurve(curve, 96).value).toBe(evaluateCurve(curve, 336).value);
+    expect(aap2022Thresholds(34, 48, false).phototherapy.value).toBeNull();
+    expect(aap2022Thresholds(NaN, 48, false).phototherapy.value).toBeNull();
   });
 
-  it('higher GA never has a lower threshold (no RF and RF)', () => {
-    for (let h = 12; h <= 200; h += 1) {
-      const noRf = [35, 36, 37, 38, 39, 40].map((g) => aap2022Thresholds(g, h, false).phototherapy.value!);
-      const rf = [35, 36, 37, 38].map((g) => aap2022Thresholds(g, h, true).phototherapy.value!);
-      for (let i = 1; i < noRf.length; i++) expect(noRf[i]).toBeGreaterThanOrEqual(noRf[i - 1]);
-      for (let i = 1; i < rf.length; i++) expect(rf[i]).toBeGreaterThanOrEqual(rf[i - 1]);
+  it.each(allCurves)('%s has 336 finite published hour values and blank hour zero', (_name, curve) => {
+    expect(curve.length).toBe(337);
+    expect(curve[0]).toBeNull();
+    for (let h = 1; h <= 336; h++) {
+      const t = evaluateCurve(curve, h);
+      expect(Number.isFinite(t.value)).toBe(true);
+      expect(t.completedHour).toBe(h);
+      expect(t.value).toBe(curve[h]);
     }
   });
 
-  it('risk-factor curve is always below the no-RF curve for the same GA', () => {
-    for (const ga of [35, 36, 37, 38, 39, 40]) {
-      for (let h = 12; h <= 200; h += 1) {
-        expect(aap2022Thresholds(ga, h, true).phototherapy.value!).toBeLessThan(
-          aap2022Thresholds(ga, h, false).phototherapy.value!,
-        );
-      }
-    }
+  it('does not plateau every curve from 96 h; preserves the Table 3 GA37 hour-154 step', () => {
+    expect(aap2022Thresholds(38, 112, false).phototherapy.value).toBe(20.8);
+    expect(aap2022Thresholds(38, 96, false).phototherapy.value).toBe(20.7);
+    expect(aap2022Thresholds(37, 153, false).exchange.value).toBe(26.9);
+    expect(aap2022Thresholds(37, 154, false).exchange.value).toBe(27);
   });
 
-  it('exchange > escalation > phototherapy wherever exchange is embedded; escalation = exchange − 2', () => {
-    for (const rf of [false, true]) {
-      for (let h = 12; h <= 336; h += 1) {
-        const t = aap2022Thresholds(39, h, rf);
-        expect(t.exchange.value! - t.escalation.value!).toBeCloseTo(2, 9);
-        expect(t.escalation.value!).toBeGreaterThan(t.phototherapy.value!);
-      }
-    }
-  });
-
-  it('interpolation stays within the bracketing anchors', () => {
-    for (const [, curve] of allCurves) {
-      for (let i = 0; i < 3; i++) {
-        for (let h = ANCHOR_HOURS[i]; h <= ANCHOR_HOURS[i + 1]; h += 0.25) {
-          const v = evaluateCurve(curve, h).value!;
-          expect(v).toBeGreaterThanOrEqual(curve.values[i] - 1e-9);
-          expect(v).toBeLessThanOrEqual(curve.values[i + 1] + 1e-9);
-        }
-      }
-    }
-  });
-
-  it('12–<24 h is flagged as extrapolated; <12 h and >336 h are not computed', () => {
-    expect(aap2022Thresholds(39, 18, false).phototherapy.status).toBe('extrapolated');
-    expect(aap2022Thresholds(39, 11.9, false).phototherapy.value).toBeNull();
-    expect(aap2022Thresholds(39, 337, false).phototherapy.value).toBeNull();
-    expect(aap2022Thresholds(39, Number.NaN, false).phototherapy.value).toBeNull();
-  });
-
-  it('35–37-week exchange curves are reported as not embedded (never invented)', () => {
-    for (const ga of [35, 36, 37]) {
-      const t = aap2022Thresholds(ga, 48, true);
-      expect(t.exchange.value).toBeNull();
-      expect(t.exchange.status).toBe('not-embedded');
-      expect(t.escalation.value).toBeNull();
-    }
+  it('only the exchange/escalation series shifts for confirmed rise despite phototherapy', () => {
+    const before = aap2022Thresholds(40, 96, false);
+    const after = aap2022Thresholds(40, 96, false, true);
+    expect(before.phototherapy.value).toBe(after.phototherapy.value);
+    expect(after.escalation.value).toBe(21.5);
+    expect(after.exchange.value).toBe(23.5);
   });
 });
 
@@ -214,8 +165,9 @@ describe('Other rules', () => {
   });
 
   it('rebound plan', () => {
-    expect(reboundPlan({ startedBefore48h: true, hemolysis: false, readmitted: false })).toMatch(/6–12 h/);
-    expect(reboundPlan({ startedBefore48h: false, hemolysis: false, readmitted: true })).toMatch(/1–2 days/);
+    expect(reboundPlan({ startedBefore48h: true, hemolysis: false, context: 'birth-admission' })).toMatch(/6–12 h/);
+    expect(reboundPlan({ startedBefore48h: false, hemolysis: false, context: 'first-treatment-on-readmission-or-home' })).toMatch(/1–2 days/);
+    expect(reboundPlan({ startedBefore48h: true, hemolysis: true, context: 'readmitted-after-birth-phototherapy' })).toMatch(/day after/);
   });
 
   it('unit conversion round-trips and formats', () => {
@@ -264,6 +216,42 @@ describe('assess() end-to-end', () => {
     expect(a.thresholds.phototherapyCurveLabel).toMatch(/≥38 wk, ≥1/);
   });
 
+  it('uses Table 4 at KAS 17 escalation even below the unchanged photo line; includes IV hydration', () => {
+    const a = assess({
+      gaWeeks: 40, measurements: [{ ageHours: 96, value: 21.6, method: 'TSB' }],
+      riskFactors: NO_RISK_FACTORS, risingDespitePhototherapy: true,
+    })!;
+    expect(a.zone).toBe('escalation');
+    expect(a.thresholds.phototherapy.value).toBe(21.8);
+    expect(a.actions.some((a) => /IV hydration/.test(a.text))).toBe(true);
+  });
+
+  it('does not apply a treatment zone to a TcB even beyond the exchange line', () => {
+    const a = assess({
+      gaWeeks: 36, albumin: 2.9,
+      measurements: [{ ageHours: 36, value: 9, method: 'TSB' }, { ageHours: 48, value: 35, method: 'TcB' }],
+      riskFactors: NO_RISK_FACTORS, risingDespitePhototherapy: true,
+    })!;
+    expect(a.zone).toBe('screening');
+    expect(a.tcbConfirm).toBe(true);
+    expect(a.baRatio).toBeNull();
+    expect(a.rate).toBeNull();
+    expect(a.followUp).toBeNull();
+    expect(a.actions.every((x) => x.level === 'urgent' || x.level === 'info')).toBe(true);
+    expect(tcbNeedsTsb(17.2 - 3, 17.2)).toBe(true);
+    expect(tcbNeedsTsb(14.17, 17.2)).toBe(false);
+  });
+
+  it('keeps discharge timing distinct from acute treatment and rebound', () => {
+    const base = { gaWeeks: 39, riskFactors: NO_RISK_FACTORS };
+    const early = assess({ ...base, measurements: [{ ageHours: 4, value: 10, method: 'TSB' }] })!;
+    const treated = assess({ ...base, measurements: [{ ageHours: 48, value: 12, method: 'TSB' }], receivedPhototherapy: true })!;
+    expect(early.zone).toBe('phototherapy');
+    expect(early.followUp).toBeNull();
+    expect(treated.followUp).toBeNull();
+    expect(treated.actions.some((a) => a.text.includes('KAS 16'))).toBe(true);
+  });
+
   it('TcB near threshold demands TSB', () => {
     const a = assess({
       gaWeeks: 38,
@@ -297,10 +285,11 @@ describe('assess() end-to-end', () => {
         riskFactors: { ...NO_RISK_FACTORS, sepsis: rnd() > 0.5 },
         albumin: rnd() > 0.5 ? 2 + rnd() * 2 : null,
       })!;
+      if (h < 0) { expect(a).toBeNull(); continue; }
       for (const t of [a.thresholds.phototherapy, a.thresholds.exchange, a.thresholds.escalation]) {
         if (t.value != null) expect(Number.isFinite(t.value)).toBe(true);
       }
-      expect(['below', 'phototherapy', 'escalation', 'exchange', 'unknown']).toContain(a.zone);
+      expect(['screening', 'below', 'phototherapy', 'escalation', 'exchange', 'unknown']).toContain(a.zone);
     }
   });
 });

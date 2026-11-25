@@ -21,6 +21,8 @@ function CalcPanel({ calc }: { calc: CaseCalc }) {
         riskFactors: { ...NO_RISK_FACTORS, ...calc.rf },
         albumin: calc.albumin,
         abeSigns: calc.abeSigns,
+        context: calc.context,
+        risingDespitePhototherapy: calc.risingDespitePhototherapy,
       })!,
     [calc],
   );
@@ -32,10 +34,14 @@ function CalcPanel({ calc }: { calc: CaseCalc }) {
   if (rfs.length) q.set('rf', rfs.join(','));
   if (calc.albumin) q.set('alb', String(calc.albumin));
   if (calc.abeSigns) q.set('abe', '1');
+  if (calc.context === 'outpatient') q.set('context', 'outpatient');
+  if (calc.risingDespitePhototherapy) q.set('riseOnPhoto', '1');
 
   return (
     <div className="rounded-xl border border-photo/40 bg-photo/6 p-3 text-sm">
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-photo">Engine read-out — {t.phototherapyCurveLabel}</p>
+      {calc.abeSigns && <p className="mb-2 font-semibold text-exch">Acute bilirubin encephalopathy signs override thresholds: urgent exchange.</p>}
+      {a.latest.method === 'TcB' && <p className="mb-2">Screening only. {a.tcbConfirm ? 'Obtain serum TSB now.' : 'Use TSB for treatment decisions.'}</p>}
       <div className="tabular grid grid-cols-2 gap-x-4 gap-y-1 sm:grid-cols-4">
         <span>
           Phototherapy <strong>{formatBili(t.phototherapy.value, unit)}</strong>

@@ -9,7 +9,7 @@ An interactive, evidence-based course and decision tool for newborn jaundice —
 | Area | What you do there |
 | --- | --- |
 | **7 learning modules** | Physiology (interactive pathway + production/clearance simulator) · Causes (filterable explorer) · Evaluation (rate-of-rise calculator, hemolysis analyzer) · Thresholds & follow-up · Treatment (stop/rebound planner, home-phototherapy checker) · Neurotoxicity (BIND scorer) · Cholestasis (stool-color exercise, Kasai clock). Each ends with retrieval practice. |
-| **Bilirubin calculator** | AAP 2022 thresholds by gestational week and neurotoxicity risk factors, escalation/exchange (≥38 wk), serial values with rate of rise, TcB→TSB rule, B/A ratio, distance-to-threshold follow-up, NICE CG98 comparison, preterm (<35 wk) table, mg/dL ↔ µmol/L, shareable links. |
+| **Bilirubin calculator** | AAP 2022 thresholds by gestational week and neurotoxicity risk factors, escalation/exchange (≥35 wk), serial values with rate of rise, TcB→TSB rule, B/A ratio, distance-to-threshold follow-up, NICE CG98 comparison, preterm (<35 wk) table, mg/dL ↔ µmol/L, shareable links. |
 | **8 clinical cases** | Step-by-step decisions; every number is computed live by the same engine as the calculator. |
 | **56-question mastery bank** | Explanations with sources, per-topic mastery, “review missed” mode, randomized option order. |
 | **Reference** | Printable quick-reference sheet, 45-term glossary, annotated source list. |
@@ -25,21 +25,16 @@ Works offline as a PWA, in light/dark themes, on phones and desktops.
 
 ### Threshold data policy
 
-Only verifiable values are embedded, and each one is labelled in the UI:
+The calculator uses [AAP 2022 Supplemental Tables 1–4](https://aap2.silverchair-cdn.com/aap2/content_public/journal/pediatrics/150/3/10.1542_peds.2022-058859/5/peds_2022058859supplementarydata.pdf), transcribed into `src/lib/bili/aap2022-hourly.json`. Index 0 is blank in the source. Use completed hours 1–336 and the published late-age constant rows; do not extrapolate outside that range or assume a 96-hour plateau. GA <35 weeks uses a separate preterm reference, not an AAP treatment calculation. Discharge follow-up starts at 12 hours, not hour 1.
 
-- **Published:** AAP 2022 phototherapy values at 24/48/72/96 h (35, 37, 38, 39, ≥40 wk without risk factors; 35 and ≥38 wk with risk factors) and the ≥38-wk exchange curve without risk factors, cross-checked across independent implementations.
-- **Interpolated:** the 36-wk curves and the 36/37-wk risk-factor curves (between published rows); hours between anchors use a monotone spline.
-- **Approximate (±0.5 mg/dL):** the ≥38-wk exchange curve with risk factors.
-- **Not embedded:** 35–37-wk exchange/escalation curves and ages <12 h. The app points to BiliTool/PediTools rather than inventing them.
-
-To embed the complete official hourly tables later, replace the curve objects in `src/lib/bili/aap2022.ts`; the tests in `src/lib/bili/bili.test.ts` and `src/data/content.test.ts` will flag any inconsistency with the cases and questions.
+TcB is a screen and does not generate treatment-zone actions. Serum TSB with confirmed rise despite ongoing phototherapy selects Table 4 for exchange and escalation without moving the phototherapy threshold. Signs of intermediate/advanced acute bilirubin encephalopathy remain urgent regardless of whether a measurement is entered.
 
 ## Development
 
 ```bash
 npm install
 npm run dev        # http://localhost:5173
-npm test           # 67 unit tests: guideline engine, invariants, fuzzing, content ↔ engine consistency
+npm test           # unit tests: guideline engine, invariants, fuzzing, content ↔ engine consistency
 npm run lint
 npm run build      # type-check + production build (dist/)
 npm run preview

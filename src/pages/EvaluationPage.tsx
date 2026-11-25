@@ -44,7 +44,7 @@ function hemolysisAnalysis(i: {
         dx: i.motherAntibody ? 'Alloimmune hemolysis (Rh(D), anti-c, anti-Kell…)' : 'ABO hemolytic disease',
         score: s,
         why,
-        next: 'Use the risk-factor curve; TSB every 4–6 h initially; IVIG only at the escalation threshold; watch for late anemia.',
+        next: 'Use the risk-factor curve; TSB every 4–6 h initially; consider IVIG at escalation if DAT-positive; watch for late anemia.',
       });
   }
   // HS

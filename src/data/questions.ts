@@ -422,7 +422,7 @@ export const QUESTIONS: Question[] = [
       'Any TSB rising >0.2 mg/dL/h',
     ],
     answer: 1,
-    explanation: 'Reaching it is a medical emergency: NICU-level care, intensive phototherapy, TSB every 2 h, labs, IVIG if isoimmune.',
+    explanation: 'Reaching it is a medical emergency: IV hydration, emergent intensive phototherapy, urgent exchange-capable NICU consultation, STAT labs and TSB at least every 2 h. IVIG is an option for positive-DAT isoimmune hemolysis.',
     refs: ['aap2022'],
   },
   {
@@ -543,7 +543,7 @@ export const QUESTIONS: Question[] = [
     options: ['0.1 g/kg once', '0.5–1 g/kg IV over 2 h, repeat in 12 h if needed', '2 g/kg over 10 min', 'IVIG is contraindicated'],
     answer: 1,
     explanation:
-      'IVIG 0.5–1 g/kg over 2 h for isoimmune hemolysis at the escalation threshold. A Cochrane review found low-certainty evidence; it does not replace preparing for exchange.',
+      'IVIG 0.5–1 g/kg over 2 h is an option for positive-DAT isoimmune hemolysis at the escalation threshold. Benefit remains uncertain; never delay exchange preparation.',
     refs: ['aap2022', 'cochraneIvig2018'],
   },
   {
